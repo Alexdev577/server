@@ -2,6 +2,7 @@
 const express = require("express");
 const SmartLink = require("../../models/SmartLink.model");
 const auth = require("../../middleware/auth");
+const Setting = require("../../models/Setting.model");
 
 // router
 const router = express.Router();
