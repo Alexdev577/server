@@ -5,6 +5,7 @@ const User = require("../../models/User.model");
 const { cleanName, cleanEmail, cleanUrl } = require("../../utilities/dataCleaning");
 const Notification = require("../../models/Notification.model");
 const { sendEmail } = require("../../utilities/mailer");
+const { generateHashToken } = require("../../utilities/mailHelper");
 
 // router
 const router = express.Router();
