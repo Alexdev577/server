@@ -12,7 +12,6 @@ const smartLinkSchema = new mongoose.Schema(
     previewLink: String,
     countries: [String],
     description: String,
-    approvalUrl: String,
   },
   {
     timestamps: true,

@@ -28,7 +28,7 @@ router.post("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
       campaignName: campaignData?.campaignName && cleanName(campaignData?.campaignName),
     });
 
-    campaign.save();
+    await campaign.save();
 
     return res.status(200).json({
       message: "Campaign creation successful!",

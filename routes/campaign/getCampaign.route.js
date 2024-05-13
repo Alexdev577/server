@@ -92,7 +92,8 @@ router.get("/", async (req, res) => {
 });
 
 //get filtered approved offers for user
-router.get("/approved", auth(["USER"]), async (req, res) => {
+router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
+  const { id } = req.params;
   const { offer, category, conversionType, country, platform } = req.query;
 
   try {
@@ -104,7 +105,7 @@ router.get("/approved", auth(["USER"]), async (req, res) => {
     const pipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: new ObjectId(id),
           status: "approved",
         },
       },
@@ -126,11 +127,11 @@ router.get("/approved", auth(["USER"]), async (req, res) => {
           $and: [
             offer
               ? {
-                  $or: [
-                    { "offerData.campaignId": { $eq: offer } },
-                    { "offerData.campaignName": { $regex: offer, $options: "i" } },
-                  ],
-                }
+                $or: [
+                  { "offerData.campaignId": { $eq: offer } },
+                  { "offerData.campaignName": { $regex: offer, $options: "i" } },
+                ],
+              }
               : {},
             category && category !== "all" ? { "offerData.category": category } : {},
             conversionType && conversionType !== "all"
@@ -143,15 +144,16 @@ router.get("/approved", auth(["USER"]), async (req, res) => {
       },
       {
         $project: {
-          _id: "$offerData._id",
+          _id: "$_id",
           campaignId: "$offerData.campaignId",
           campaignName: "$offerData.campaignName",
           category: "$offerData.category",
           conversionType: "$offerData.conversionType",
-          status: "$offerData.status",
+          offerActivityStatus: "$offerData.status",
           approvedAt: "$approvedAt",
           countries: "$offerData.countries",
           price: "$offerData.price",
+          offerApprovalStatus: "$status"
         },
       },
     ];

@@ -25,7 +25,6 @@ router.post("/", (req, res) => {
   User.findOne({
     $or: [{ email: userData?.email }, { userName: userData?.userName }],
   }).then((result) => {
-    // console.log(result);
     if (!result) {
       bcrypt.hash(userData?.password, 10, async (err, hash) => {
         if (err) {

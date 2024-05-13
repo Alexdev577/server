@@ -77,6 +77,8 @@ router.patch("/verify-email/:id", async (req, res) => {
   const { id } = req.params;
   const { token } = req.body;
 
+  console.log(id, token);
+
   try {
     // Find the user by id
     const user = await User.findOne({
