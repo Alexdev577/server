@@ -6,7 +6,6 @@ const User = require("../../models/User.model");
 const Notification = require("../../models/Notification.model");
 const auth = require("../../middleware/auth");
 const { mySimpleEncoder } = require("../../utilities/encoderDecoder.js");
-const Setting = require("../../models/Setting.model");
 
 // router
 const router = express.Router();
@@ -129,13 +128,15 @@ router.patch("/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     }
 
     const updatedDoc = { status };
-    const { domainName } = await Setting.findById(null);
 
     if (status === "approved") {
       const encodedUserId = mySimpleEncoder(request?.userInfo?.userId);
-      const approvalUrl = `${domainName}?offerId=${request?.campaign?.campaignId}&affId=${encodedUserId}`;
+      const approvalUrl = `?offerId=${request?.campaign?.campaignId}&affId=${encodedUserId}`;
       updatedDoc.approvalUrl = approvalUrl;
       updatedDoc.approvedAt = new Date();
+    }
+    if (status === "rejected") {
+      updatedDoc.approvalUrl = "";
     }
 
     const result = await AffiliationRequest.findOneAndUpdate(

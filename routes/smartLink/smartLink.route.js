@@ -21,33 +21,35 @@ router.get("/", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
 });
 
 // update smart link data
-router.patch("/:id", auth(["ADMIN"]), async (req, res) => {
-  const { id } = req.params;
+router.patch("/", auth(["ADMIN"]), async (req, res) => {
   const updateData = req.body;
 
   try {
-    // Find the manager by id field
-    const exist = await SmartLink.findById(id);
+    // Find the smart link
+    const smartLink = await SmartLink.findOne({ campaignId: "0001" });
 
-    // check if the user exists
-    if (!exist) {
-      return res.status(404).json({  message: "Link not found!" });
+    // if not exists
+    if (!smartLink) {
+      const newSmartLink = new SmartLink({
+        ...updateData,
+        campaignId: "0001",
+      });
+      await newSmartLink.save();
+
+      return res.status(200).json({
+        message: "Smart link created!",
+      });
     }
 
-    const { domainName } = await Setting.findById(null);
-    const approvalUrl = `${domainName}?offerId=${exist?.campaignId}&affId=`;
-    updateData.approvalUrl = approvalUrl;
-
-    const result = await SmartLink.findOneAndUpdate({ _id: id }, updateData, {
+    await SmartLink.findOneAndUpdate({ campaignId: "0001" }, updateData, {
       upsert: true,
     });
 
     return res.status(200).json({
-      result,
-      message: "Link updated successfully!",
+      message: "Smart link updated successfully!",
     });
   } catch (error) {
-    res.status(500).json({  message: error?.message });
+    res.status(500).json({ message: error?.message });
   }
 });
 
