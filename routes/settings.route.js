@@ -18,19 +18,19 @@ router.get("/", async (req, res) => {
 router.patch("/", auth(["ADMIN"]), async (req, res) => {
   const data = req.body;
   const dataToUpdate = {
-    domainName: data.domainName,
-    topCampaignFlag: data.topCampaignFlag,
-    dayToWithdraw: data.dayToWithdraw,
-    minWithdrawBalance: data.minWithdrawBalance,
+    domainName: data?.domainName && data.domainName,
+    topCampaignFlag: data?.topCampaignFlag && data.topCampaignFlag,
+    dayToWithdraw: data?.dayToWithdraw && data.dayToWithdraw,
+    dateToWithdraw: data?.dateToWithdraw && data.dateToWithdraw,
+    minWithdrawBalance: data?.minWithdrawBalance && data.minWithdrawBalance,
   };
 
   try {
-    const result = await Setting.findByIdAndUpdate(null, dataToUpdate, {
+    await Setting.findByIdAndUpdate(null, dataToUpdate, {
       upsert: true,
       new: true,
     });
     return res.status(200).json({
-      data: result,
       message: "Settings updated!",
     });
   } catch (error) {

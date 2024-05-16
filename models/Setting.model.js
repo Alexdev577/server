@@ -5,6 +5,7 @@ const settingSchema = new mongoose.Schema(
     domainName: String,
     topCampaignFlag: String,
     dayToWithdraw: Number,
+    dateToWithdraw: [String],
     minWithdrawBalance: Number,
     invoiceFlag: Boolean,
   },

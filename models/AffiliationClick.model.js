@@ -19,7 +19,7 @@ const affiliationClickSchema = new mongoose.Schema(
     country: String,
     campaignUrl: String,
     transactionId: String,
-    status: { type: String, default: "approved" },
+    status: String,
     paymentStatus: { type: String, default: "unpaid" },
     lead: Number,
     createdAt: { type: Date, default: new Date() },

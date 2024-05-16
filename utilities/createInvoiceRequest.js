@@ -52,7 +52,7 @@ const createInvoiceRequest = async (minWithdrawBalance) => {
       targetRole: "ADMIN",
       heading: `${invoiceCount} new invoices request created!`,
       type: "invoice-creation",
-      link: `/payAffiliates`,
+      link: `/invoice-requests`,
     });
   }
   return invoiceRequest;
