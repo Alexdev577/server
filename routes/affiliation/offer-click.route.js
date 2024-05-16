@@ -9,6 +9,7 @@ const User = require("../../models/User.model");
 const crypto = require("crypto");
 const auth = require("../../middleware/auth");
 const { mySimpleDecoder } = require("../../utilities/encoderDecoder.js");
+const UserAccount = require("../../models/UserAccount.model.js");
 
 // router
 const router = express.Router();
@@ -166,6 +167,23 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
     const userClicked = await AffiliationClick.insertMany(clicks);
     const adminClicked = await AdAffiliationClick.insertMany(clicks);
 
+    const account = await UserAccount.findOne({ userOid: userInfo?._id });
+    const price = campaignInfo?.price || data?.price;
+    const totalAmount = parseFloat(price) * parseInt(data?.leads);
+
+    if (!account && data?.status === "approved" && totalAmount > 0) {
+      await UserAccount.create({
+        userOid: userInfo?._id,
+        totalRevenue: totalAmount,
+        currentBalance: totalAmount,
+      });
+    }
+    if (account && data?.status === "approved" && totalAmount > 0) {
+      account.totalRevenue += totalAmount;
+      account.currentBalance += totalAmount;
+      await account.save();
+    }
+
     if (!adminClicked || !userClicked) {
       return res.status(406).json({ message: "Something went wrong!" });
     }
@@ -182,14 +200,14 @@ router.post("/postback", async (req, res) => {
 
   try {
     //------------ define data for update conditionally ------------//
-    const updatedDoc = { lead: 1, updatedAt: new Date() };
+    const updatedDoc = { lead: 1, status: "approved", updatedAt: new Date() };
     if (payout) {
-      updatedDoc.price = parseInt(payout);
+      updatedDoc.price = parseFloat(payout);
     }
     if (status) {
       updatedDoc.status = status;
     }
-    //---------- save genuine data into admin collection ----------//
+    //---------- save genuine data into admin-clicks collection ----------//
     const adminOfferClick = await AdAffiliationClick.findOneAndUpdate(
       {
         transactionId: transId,
@@ -197,6 +215,7 @@ router.post("/postback", async (req, res) => {
       updatedDoc,
       { upsert: false }
     );
+
     if (!adminOfferClick) {
       return res.status(404).json({ message: "Transaction details not found!" });
     }
@@ -210,7 +229,7 @@ router.post("/postback", async (req, res) => {
     }
 
     if (!campaign) {
-      return res.status(404).json({ message: "Transaction details not found!" });
+      return res.status(404).json({ message: "No associated offer found!" });
     }
 
     //---------- apply admincut on price ----------//
@@ -225,21 +244,53 @@ router.post("/postback", async (req, res) => {
     const commission = campaign?.commission / 10;
 
     if (counter > commission) {
+      const prevClickState = await AffiliationClick.findOne({
+        transactionId: transId,
+      });
       await AffiliationClick.findOneAndUpdate(
         {
           transactionId: transId,
         },
         updatedDoc,
-        { upsert: false }
-      );
+        { upsert: false, new: true }
+      ).then(async (result) => {
+        if (!result) {
+          return res.status(500).json({ message: "Something went wrong!" });
+        }
+
+        const account = await UserAccount.findOne({ userOid: result?.userInfo });
+
+        if (!account && updatedDoc?.status === "approved") {
+          await UserAccount.create({
+            userOid: result?.userInfo,
+            totalRevenue: parseFloat(result?.price),
+            currentBalance: parseFloat(result?.price),
+          });
+        }
+        if (account && updatedDoc?.status === "approved") {
+          if (prevClickState?.status === "approved") {
+            account.totalRevenue =
+              account.totalRevenue - prevClickState?.price + parseFloat(result?.price);
+            account.currentBalance =
+              account.currentBalance - prevClickState?.price + parseFloat(result?.price);
+            await account.save();
+          } else {
+            account.totalRevenue += parseFloat(result?.price);
+            account.currentBalance += parseFloat(result?.price);
+            await account.save();
+          }
+        }
+      });
     }
     // ---------- update counter ----------//
-    if (campaign.counter === 10) {
-      campaign.counter = 1;
-      campaign.save();
-    } else {
-      campaign.counter += 1;
-      campaign.save();
+    if (updatedDoc?.status === "approved") {
+      if (campaign.counter === 10) {
+        campaign.counter = 1;
+        campaign.save();
+      } else {
+        campaign.counter += 1;
+        campaign.save();
+      }
     }
     res.status(200).json({ message: "The postback well received!" });
   } catch (error) {

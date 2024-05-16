@@ -88,18 +88,16 @@ router.get("/user-option/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, r
 });
 
 // update payout option data by user auth(["USER"]),
-router.patch("/user-option/:id", async (req, res) => {
+router.patch("/user-option/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
-  console.log(updateData);
   try {
     const method = await PayoutMethodType.findOne({ name: updateData?.paymentMethod });
 
     if (!method) {
       return res.status(404).json({ message: "This payment method is unavailable!" });
     }
-
-    const result = await PaymentMethodUser.findOneAndUpdate({ userId: id }, updateData, {
+    const result = await PaymentMethodUser.findOneAndUpdate({ userOid: id }, updateData, {
       upsert: true,
       new: true,
     });

@@ -8,9 +8,8 @@ const userAccountSchema = new mongoose.Schema(
     },
     currentBalance: { type: Number, default: 0 },
     totalRevenue: { type: Number, default: 0 },
-    pendingRevenue: { type: Number, default: 0 },
-    pendingWithdrawal: { type: Number, default: 0 },
     totalWithdrawal: { type: Number, default: 0 },
+    pendingWithdrawal: { type: Number, default: 0 },
   },
   {
     timestamps: true,

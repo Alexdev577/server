@@ -11,18 +11,19 @@ const Notification = require("../../models/Notification.model");
 const auth = require("../../middleware/auth");
 const router = express.Router();
 
-// create invoice request on specified week-day
+// create invoice-request on admin specified date
 router.get("/create-invoice", auth(["ADMIN"]), async (req, res) => {
   try {
     const setting = await Setting.findById(null);
 
-    const dayToWithdraw = setting?.dayToWithdraw;
+    // const dayToWithdraw = setting?.dayToWithdraw;
+    const dateToWithdraw = setting?.dateToWithdraw;
     const minWithdrawBalance = setting?.minWithdrawBalance;
     const invoiceFlag = setting?.invoiceFlag;
 
     // const invoice = await createInvoiceRequest(minWithdrawBalance);
     const today = new Date();
-    if (today.getDay() === dayToWithdraw) {
+    if (dateToWithdraw.includes(today.getDate())) {
       if (invoiceFlag) {
         await createInvoiceRequest(minWithdrawBalance);
 
@@ -50,7 +51,7 @@ router.get("/create-invoice", auth(["ADMIN"]), async (req, res) => {
   }
 });
 
-// get invoice request list
+// get invoice-request list
 router.get("/invoice-requests", auth(["ADMIN"]), async (req, res) => {
   try {
     const pipeline = [
@@ -108,7 +109,7 @@ router.get("/invoice-requests", auth(["ADMIN"]), async (req, res) => {
   }
 });
 
-// get invoice request by id
+// get invoice-request details by id
 router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
   const { id } = req.params;
   try {
@@ -187,7 +188,7 @@ router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
   }
 });
 
-// update single invoice details
+// update invoice-request and create final invoice for user
 router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
   const { id } = req.params;
   const dataToUpdate = req.body;
@@ -197,6 +198,7 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
     if (!invoiceRequest) {
       return res.status(404).json({ message: "No invoice found!" });
     }
+
     const unpaidOffersData = [];
     for (data of dataToUpdate) {
       const weeklyClicks = await WeeklyOfferwiseClick.findById(data._id);
@@ -215,7 +217,7 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
         { paymentStatus: "paid" },
         { upsert: true, new: true }
       ).then(async (result) => {
-        for (transId of result.transIds) {
+        for (transId of result?.transIds) {
           await AffiliationClick.findOneAndUpdate(
             { transactionId: transId },
             {
@@ -240,7 +242,7 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
     const invoiceId = await generateInvoiceId();
     await Invoice.create({
       invoiceId,
-      userOid: invoiceRequest.userOid,
+      userOid: invoiceRequest?.userOid,
       paymentAmount: total,
     }).then(
       async (invoice) =>
@@ -255,13 +257,14 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
 
     invoiceRequest.activityStatus = "active";
     invoiceRequest.save();
+
     res.status(200).json({ message: "Payment Completed" });
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }
 });
 
-//get single invoice by user
+//get invoice
 router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res) => {
   try {
     let filter = {};
@@ -276,6 +279,31 @@ router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res)
     }
 
     res.status(200).json(invoice);
+  } catch (err) {
+    res.status(500).json({ message: err?.message });
+  }
+});
+
+//upaate invoice status
+router.patch("/payment-status", auth(["ADMIN"]), async (req, res) => {
+  const data = req.body;
+
+  try {
+    const invoiceData = await Invoice.findOne({ invoiceId: data.invoiceId });
+    if (!invoiceData) {
+      return res.status(404).json({ message: "No invoice found!" });
+    }
+
+    invoiceData.paymentStatus = data?.status;
+    const saveInvoice = await invoiceData.save();
+
+    if (!saveInvoice) {
+      return res.status(500).json({ message: "something went wrong!" });
+    }
+
+    res.status(200).json({
+      message: "payment status updated!",
+    });
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }

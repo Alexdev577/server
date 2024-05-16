@@ -9,6 +9,8 @@ const paymentMethodUserSchema = new mongoose.Schema(
     userId: String,
     paymentMethod: String,
     email: String,
+    cryptoType: String,
+    cryptoAddress: String,
   },
   {
     timestamps: true,
