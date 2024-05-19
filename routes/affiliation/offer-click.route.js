@@ -63,6 +63,8 @@ router.post("/", async (req, res) => {
       userId: userInfo?.userId,
       ipAddress: ip ?? "",
       country: country ?? "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     await admin_aff_click.save();
 
@@ -76,8 +78,10 @@ router.post("/", async (req, res) => {
       transactionId: transId,
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
-      ipAddress: ip,
-      country,
+      ipAddress: ip ?? "",
+      country: country ?? "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
     await aff_click.save();
 

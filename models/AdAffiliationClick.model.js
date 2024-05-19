@@ -12,7 +12,6 @@ const adAffiliationClickSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "User",
     },
-    userName: String,
     userId: String,
     price: Number,
     ipAddress: String,
