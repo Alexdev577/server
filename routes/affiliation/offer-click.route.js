@@ -61,8 +61,8 @@ router.post("/", async (req, res) => {
       transactionId: transId,
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
-      ipAddress: ip,
-      country,
+      ipAddress: ip ?? "",
+      country: country ?? "",
     });
     await admin_aff_click.save();
 
