@@ -290,10 +290,10 @@ router.post("/postback", async (req, res) => {
     if (updatedDoc?.status === "approved") {
       if (campaign.counter === 10) {
         campaign.counter = 1;
-        campaign.save();
+        await campaign.save();
       } else {
         campaign.counter += 1;
-        campaign.save();
+        await campaign.save();
       }
     }
     res.status(200).json({ message: "The postback well received!" });
@@ -318,8 +318,8 @@ router.patch("/status/:id", auth(["ADMIN"]), async (req, res) => {
     }
 
     const result = await AffiliationClick.findOneAndUpdate({ _id: id }, updateData, {
-      upsert: true,
-      // new: true,
+      upsert: false,
+      new: true,
     });
 
     return res.status(200).json({

@@ -26,7 +26,7 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
     name: conversionType.charAt(0).toUpperCase() + conversionType.slice(1),
   });
 
-  singleType.save();
+  await singleType.save();
 
   return res.status(200).json({
     message: "Item created successfully!",

@@ -41,10 +41,17 @@ router.post("/", auth(["USER"]), async (req, res) => {
     });
 
     campaignReq.save().then(async (result) => {
-      // admins action log
+      // notify associate manager
       await Notification.create({
         targetRole: "MANAGER",
         managerInfo: userInfo?.manager,
+        heading: `${userInfo?.name} requested for Offer #${requestData?.campaignId}`,
+        type: "offer_request",
+        link: `/campaign-request`,
+      });
+      // notify admin
+      await Notification.create({
+        targetRole: "ADMIN",
         heading: `${userInfo?.name} requested for Offer #${requestData?.campaignId}`,
         type: "offer_request",
         link: `/campaign-request`,
@@ -78,11 +85,11 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 });
 
 //get pending request
-router.get("/pending-request", async (req, res) => {
+router.get("/pending-request", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    const requestCount = await AffiliationRequest.find({
-      status: { $eq: "pending" },
-    }).countDocuments();
+    const requestCount = await AffiliationRequest.countDocuments({
+      status: "pending",
+    });
 
     return res.status(200).json({
       dataCount: requestCount,
@@ -142,10 +149,10 @@ router.patch("/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     const result = await AffiliationRequest.findOneAndUpdate(
       { _id: id },
       { ...updatedDoc },
-      { upsert: true, new: true }
+      { upsert: false, new: true }
     ).populate([{ path: "campaign", select: "campaignId" }]);
 
-    // admins action log
+    // notify user
     if (result) {
       await Notification.create({
         targetRole: "USER",

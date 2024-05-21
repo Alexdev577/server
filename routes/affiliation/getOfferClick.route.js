@@ -231,6 +231,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 
     //------------- get monthly click data -----------------//
     const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
+    // const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
     //-------------- get daily click data -----------------//
     const dailyData = await AffiliationClick.aggregate(dailyPipeline);
 

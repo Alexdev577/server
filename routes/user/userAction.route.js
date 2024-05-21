@@ -51,12 +51,12 @@ router.post("/send-verification-link/:id", async (req, res) => {
         token,
         emailType: "verify-email",
       })
-        .then((response) => {
+        .then(async (response) => {
           // console.log("Mail sent:", response);
           user.verificationToken = token;
           user.verificationTokenExpiry = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
 
-          user.save();
+          await user.save();
 
           return res.status(200).json({ message: `Link has been sent to "${user?.email}"` });
         })
@@ -103,7 +103,7 @@ router.patch("/verify-email/:id", async (req, res) => {
     user.verificationToken = undefined;
     user.verificationTokenExpiry = undefined;
 
-    user.save();
+    await user.save();
 
     res.status(200).json({ message: "Account verified!" });
   } catch (error) {
@@ -133,12 +133,12 @@ router.post("/send-resetpass-link", async (req, res) => {
         token,
         emailType: "reset-password",
       })
-        .then((response) => {
+        .then(async (response) => {
           // console.log("Mail sent:", response);
           user.forgotPassToken = token;
           user.forgotPassTokenExpiry = new Date(new Date().getTime() + 24 * 60 * 60 * 1000);
 
-          user.save();
+          await user.save();
 
           return res.status(200).json({ message: `a link has been sent to "${user?.email}"` });
         })

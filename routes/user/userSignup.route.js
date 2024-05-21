@@ -48,7 +48,7 @@ router.post("/", (req, res) => {
           verificationToken: token,
           verificationTokenExpiry: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),
         });
-        user
+        await user
           .save()
           .then(async (result) => {
             if (token) {
@@ -66,7 +66,7 @@ router.post("/", (req, res) => {
                 });
             }
 
-            // admins action log
+            // notify admins
             await Notification.create({
               targetRole: "ADMIN",
               heading: `New user registration ${result?.name}`,

@@ -6,13 +6,14 @@ const WeeklyOfferwiseClick = require("../../models/WeeklyOfferwiseClick.model");
 const AffiliationClick = require("../../models/AffiliationClick.model");
 const AdAffiliationClick = require("../../models/AdAffiliationClick.model");
 const Invoice = require("../../models/Invoice.model");
+const UserAccount = require("../../models/UserAccount.model");
 const Notification = require("../../models/Notification.model");
 
 const auth = require("../../middleware/auth");
 const router = express.Router();
 
 // create invoice-request on admin specified date
-router.get("/create-invoice", auth(["ADMIN"]), async (req, res) => {
+router.get("/create-invoice", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const setting = await Setting.findById(null);
 
@@ -199,41 +200,44 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
       return res.status(404).json({ message: "No invoice found!" });
     }
 
+    //check if offers are unpaid?
     const unpaidOffersData = [];
-    for (data of dataToUpdate) {
-      const weeklyClicks = await WeeklyOfferwiseClick.findById(data._id);
-      if (weeklyClicks?.paymentStatus === "unpaid") {
-        unpaidOffersData.push(weeklyClicks);
-      }
-    }
+    const ids = dataToUpdate.map((data) => data._id);
+    const weeklyClicks = await WeeklyOfferwiseClick.find({
+      _id: { $in: ids },
+      paymentStatus: "unpaid",
+    });
+    unpaidOffersData.push(...weeklyClicks);
 
     if (unpaidOffersData.length < 1) {
       return res.status(404).json({ message: "No unpaid offer available!" });
     }
 
-    for (data of unpaidOffersData) {
-      await WeeklyOfferwiseClick.findByIdAndUpdate(
-        data._id,
-        { paymentStatus: "paid" },
-        { upsert: true, new: true }
-      ).then(async (result) => {
-        for (transId of result?.transIds) {
-          await AffiliationClick.findOneAndUpdate(
-            { transactionId: transId },
-            {
-              paymentStatus: "paid",
-            }
-          );
-          await AdAffiliationClick.findOneAndUpdate(
-            { transactionId: transId },
-            {
-              paymentStatus: "paid",
-            }
-          );
-        }
-      });
-    }
+    //=========== update teh weeklyOfferwiseClick and affiliationClick collection ==========//
 
+    const unpaidOfferIds = unpaidOffersData.map((data) => data._id);
+    const allTransIds = unpaidOffersData.reduce((acc, data) => acc.concat(data.transIds || []), []);
+
+    // Batch update WeeklyOfferwiseClick documents
+    await WeeklyOfferwiseClick.updateMany(
+      { _id: { $in: unpaidOfferIds } },
+      { paymentStatus: "paid" },
+      { upsert: false }
+    );
+
+    // Batch update AffiliationClick and AdAffiliationClick documents
+    await AffiliationClick.updateMany(
+      { transactionId: { $in: allTransIds } },
+      { paymentStatus: "paid" },
+      { upsert: false }
+    );
+    await AdAffiliationClick.updateMany(
+      { transactionId: { $in: allTransIds } },
+      { paymentStatus: "paid" },
+      { upsert: false }
+    );
+
+    //=========== create invoice here ==========//
     let total = 0;
     for (data of unpaidOffersData) {
       total += data?.revenue;
@@ -244,19 +248,25 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
       invoiceId,
       userOid: invoiceRequest?.userOid,
       paymentAmount: total,
-    }).then(
-      async (invoice) =>
-        await Notification.create({
-          targetRole: "USER",
-          userInfo: invoice?.userOid,
-          heading: "New Invoice Created",
-          type: "invoice-creation",
-          link: `/payment`,
-        })
-    );
+    }).then(async (invoice) => {
+      //update user account
+      const userAccount = await UserAccount.findOne({ userOid: invoice?.userOid });
+      userAccount.currentBalance -= parseFloat(invoice.paymentAmount);
+      userAccount.pendingWithdrawal += parseFloat(invoice.paymentAmount);
+      await userAccount.save();
+
+      // notify user
+      await Notification.create({
+        targetRole: "USER",
+        userInfo: invoice?.userOid,
+        heading: "New Invoice Created",
+        type: "invoice-creation",
+        link: `/payment`,
+      });
+    });
 
     invoiceRequest.activityStatus = "active";
-    invoiceRequest.save();
+    await invoiceRequest.save();
 
     res.status(200).json({ message: "Payment Completed" });
   } catch (error) {
@@ -295,14 +305,25 @@ router.patch("/payment-status", auth(["ADMIN"]), async (req, res) => {
     }
 
     invoiceData.paymentStatus = data?.status;
-    const saveInvoice = await invoiceData.save();
-
-    if (!saveInvoice) {
-      return res.status(500).json({ message: "something went wrong!" });
-    }
+    await invoiceData.save().then(async (result) => {
+      if (!result) {
+        return res.status(500).json({ message: "something went wrong!" });
+      }
+      const userAccount = await UserAccount.findOne({ userOid: result?.userOid });
+      if (data?.status === "approved") {
+        userAccount.pendingWithdrawal -= parseFloat(result?.paymentAmount);
+        userAccount.totalWithdrawal += parseFloat(result?.paymentAmount);
+        await userAccount.save();
+      }
+      if (data?.status === "pending") {
+        userAccount.pendingWithdrawal += parseFloat(result?.paymentAmount);
+        userAccount.totalWithdrawal -= parseFloat(result?.paymentAmount);
+        await userAccount.save();
+      }
+    });
 
     res.status(200).json({
-      message: "payment status updated!",
+      message: `payment status updated!`,
     });
   } catch (err) {
     res.status(500).json({ message: err?.message });

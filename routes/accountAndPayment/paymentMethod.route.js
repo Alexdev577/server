@@ -1,6 +1,5 @@
 // require
 const express = require("express");
-const User = require("../../models/User.model");
 const PaymentMethodUser = require("../../models/PaymentMethodUser.model");
 const PayoutMethodType = require("../../models/PayoutMethodType.model");
 const auth = require("../../middleware/auth");
@@ -20,7 +19,7 @@ router.post("/create-method", auth(["ADMIN"]), async (req, res) => {
   const method = new PayoutMethodType({
     name: methodName.charAt(0).toUpperCase() + methodName.slice(1),
   });
-  method.save();
+  await method.save();
 
   return res.status(200).json({
     message: "Payment mathod created!",
@@ -73,9 +72,9 @@ router.get("/user-option", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) 
 
 //get single user payment option data
 router.get("/user-option/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-    const userMethod = await PaymentMethodUser.findOne({ userId: id }).select("-__v");
+    const userMethod = await PaymentMethodUser.findOne({ userId: id });
 
     if (!userMethod) {
       return res.status(404).json({ message: "Method not found!" });

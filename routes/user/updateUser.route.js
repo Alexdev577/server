@@ -82,7 +82,7 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
         { _id: id },
         { ...updateData, password: user?.password },
         {
-          upsert: true,
+          upsert: false,
         }
       );
       // send mail if status changed //

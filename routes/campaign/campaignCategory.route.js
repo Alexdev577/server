@@ -26,7 +26,7 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
     name: CategoryName.charAt(0).toUpperCase() + CategoryName.slice(1),
   });
 
-  category.save();
+  await category.save();
 
   return res.status(200).json({
     message: "Category created successfully!",

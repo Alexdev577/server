@@ -17,7 +17,7 @@ router.get("/", (req, res) => {
   res.status(200).json({ message: "Not applicable" });
 });
 
-// user login
+// manager login
 router.post("/", (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
