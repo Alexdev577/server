@@ -74,13 +74,6 @@ router.get("/", async (req, res) => {
         };
       }
     }
-
-    // const filters = {};
-    // for (const key in queryData) {
-    //   if (queryData.hasOwnProperty(key) && queryData[key]) {
-    //     filters[key] = queryData[key];
-    //   }
-    // }
     const allCampaign = await Campaign.find(filter).sort({
       createdAt: -1,
     });

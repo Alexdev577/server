@@ -1,6 +1,5 @@
 const Manager = require("../../models/Manager.model");
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const { cleanUrl } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");
@@ -32,7 +31,7 @@ router.get("/list", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   }
 });
 
-router.get("/single/:id", async (req, res) => {
+router.get("/single/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }

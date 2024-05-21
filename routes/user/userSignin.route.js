@@ -10,7 +10,7 @@ const { cleanUrl } = require("../../utilities/dataCleaning");
 const router = express.Router();
 
 // unexpected get api response
-router.get("/", (req, res, next) => {
+router.get("/", (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }
@@ -18,7 +18,7 @@ router.get("/", (req, res, next) => {
 });
 
 // user login
-router.post("/", (req, res, next) => {
+router.post("/", (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }

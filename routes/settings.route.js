@@ -27,8 +27,7 @@ router.patch("/", auth(["ADMIN"]), async (req, res) => {
 
   try {
     await Setting.findByIdAndUpdate(null, dataToUpdate, {
-      upsert: true,
-      new: true,
+      upsert: false,
     });
     return res.status(200).json({
       message: "Settings updated!",

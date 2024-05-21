@@ -95,24 +95,6 @@ router.get("/user", auth(["USER"]), async (req, res) => {
       .endOf("day")
       .format("YYYY-MM-DDTHH:mm:ss");
 
-    // const startOfStartDate = moment
-    //   .parseZone(startDate, "ddd MMM DD YYYY HH:mm:ss [GMT] Z (zz)")
-    //   .startOf("day")
-    //   .format("YYYY-MM-DDTHH:mm:ssZ");
-    // const endOfEndDate = moment
-    //   .parseZone(endDate, "ddd MMM DD YYYY HH:mm:ss [GMT] Z (zz)")
-    //   .endOf("day")
-    //   .format("YYYY-MM-DDTHH:mm:ssZ");
-
-    // console.log(
-    //   startDate,
-    //   endDate,
-    //   startOfStartDate,
-    //   endOfEndDate,
-    //   new Date(startOfStartDate),
-    //   new Date(endOfEndDate + "Z")
-    // );
-
     let matchStage = {
       userInfo: new ObjectId(req?.user?._id),
       updatedAt: {
@@ -121,10 +103,20 @@ router.get("/user", auth(["USER"]), async (req, res) => {
       },
     };
 
-    if (transStatus && transStatus !== "all") {
+    if (transStatus && transStatus !== "approved") {
       matchStage = {
         userInfo: new ObjectId(req?.user?._id),
         status: transStatus,
+        updatedAt: {
+          $gte: new Date(startOfStartDate),
+          $lte: new Date(endOfEndDate + "Z"),
+        },
+      };
+    }
+    if (transStatus && transStatus == "approved") {
+      matchStage = {
+        userInfo: new ObjectId(req?.user?._id),
+        status: { $nin: ["pending", "denied"] },
         updatedAt: {
           $gte: new Date(startOfStartDate),
           $lte: new Date(endOfEndDate + "Z"),
@@ -239,6 +231,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 
     //------------- get monthly click data -----------------//
     const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
+    // const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
     //-------------- get daily click data -----------------//
     const dailyData = await AffiliationClick.aggregate(dailyPipeline);
 
@@ -251,7 +244,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 // get affiliation report by offerId
 router.get("/offer-id/:offerId", auth(["USER"]), async (req, res) => {
   const { offerId } = req.params;
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, status } = req.query;
 
   try {
     // modify start and end dates
@@ -262,16 +255,30 @@ router.get("/offer-id/:offerId", auth(["USER"]), async (req, res) => {
       .endOf("day")
       .format("YYYY-MM-DDTHH:mm:ss");
 
+    let matchStage = {
+      userInfo: new ObjectId(req?.user?._id),
+      offerId,
+      status: { $nin: ["pending", "denied"] },
+      updatedAt: {
+        $gte: new Date(startOfStartDate),
+        $lte: new Date(endOfEndDate + "Z"),
+      },
+    };
+    if (status === "pending" || status === "denied") {
+      matchStage = {
+        userInfo: new ObjectId(req?.user?._id),
+        offerId,
+        status,
+        updatedAt: {
+          $gte: new Date(startOfStartDate),
+          $lte: new Date(endOfEndDate + "Z"),
+        },
+      };
+    }
+
     const pipeline = [
       {
-        $match: {
-          userInfo: new ObjectId(req?.user?._id),
-          offerId,
-          updatedAt: {
-            $gte: new Date(startOfStartDate),
-            $lte: new Date(endOfEndDate + "Z"),
-          },
-        },
+        $match: matchStage,
       },
       {
         $group: {

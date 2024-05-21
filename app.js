@@ -9,14 +9,14 @@ require("dotenv").config();
 const corsOptions = {
   origin: [
     "https://affburg.com/",
-    "https://admin.affburg.com/",
+    "https://adm.affburg.com/",
     "https://affburg-main.vercel.app/",
     "https://affburg-admin-panel.vercel.app/",
     "http://localhost:3000/",
     "http://localhost:3001/",
     "*",
   ],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -24,6 +24,7 @@ const corsOptions = {
 app.use(cors());
 app.use(express.json());
 
+// console.log(process.env.MONGODB_URI);
 
 mongoose.connect(process.env.MONGODB_URI, {
   // useNewUrlParser: true,
@@ -64,27 +65,19 @@ app.use("/user-account", userAccount);
 app.use("/payment", paymentMethod);
 app.use("/invoice", invoiceAndPayments);
 
-// admin
-// const adminSignIn = require("./routes/admin/adminSignin.route");
-// app.use("/admin-signin", adminSignIn);
-
 // manager
 const managerSingin = require("./routes/manager/managerSignin.route");
-const postManager = require("./routes/manager/postManager.route");
 const getManager = require("./routes/manager/getManager.route");
-const patchManager = require("./routes/manager/patchManager.route");
-const deleteManager = require("./routes/manager/deleteManager.route");
+const managerActions = require("./routes/manager/managerActions.route");
+const loginAsUser = require("./routes/manager/loginAsUser.route");
 app.use("/manager-signin", managerSingin);
-app.use("/post-manager", postManager);
 app.use("/get-manager", getManager);
-app.use("/patch-manager", patchManager);
-app.use("/delete-manager", deleteManager);
+app.use("/manager", managerActions);
+app.use("/login-as-user", loginAsUser);
 
 // Notification
-const getNotification = require("./routes/notification/getNotification.route");
-const patchNotification = require("./routes/notification/patchNotification.route");
-app.use("/get-notification", getNotification);
-app.use("/patch-notification", patchNotification);
+const notification = require("./routes/notification/notification.route");
+app.use("/notification", notification);
 
 //Campaign category
 const campaignCategory = require("./routes/campaign/campaignCategory.route");
@@ -99,14 +92,10 @@ const trafficType = require("./routes/campaign/trafficType.route");
 app.use("/traffic-type", trafficType);
 
 // Campaign
-const postCampaign = require("./routes/campaign/postCampaign.route");
-const patchCampaign = require("./routes/campaign/patchCampaign.route");
+const campaignActions = require("./routes/campaign/campaignActions.route");
 const getCampaign = require("./routes/campaign/getCampaign.route");
-const deleteCampaign = require("./routes/campaign/deleteCampaign.route");
-app.use("/post-campaign", postCampaign);
-app.use("/patch-campaign", patchCampaign);
+app.use("/campaign", campaignActions);
 app.use("/get-campaign", getCampaign);
-app.use("/delete-campaign", deleteCampaign);
 
 //SmartLinks
 const smartLink = require("./routes/smartLink/smartLink.route");
