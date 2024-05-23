@@ -16,7 +16,7 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     const conditions = [];
     // Add managerId condition to access control
     if (req.user?.role === "MANAGER") {
-      conditions.push({ manager: req.user._id });
+      conditions.push({ $or: [{ manager: req?.user?._id }, { manager: { $exists: false } }] });
     }
 
     // Add searchTerm condition if present

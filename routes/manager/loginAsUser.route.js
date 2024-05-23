@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const auth = require("../../middleware/auth");
 
 // manager login as user
-router.post("/", auth("ADMIN", "MANAGER"), async (req, res) => {
+router.post("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { userOid } = req.body;
   try {
     const user = await User.findById(userOid);
