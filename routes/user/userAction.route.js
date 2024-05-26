@@ -73,24 +73,21 @@ router.post("/send-verification-link/:id", async (req, res) => {
 });
 
 //* verify email
-router.patch("/verify-email/:id", async (req, res) => {
-  const { id } = req.params;
+router.patch("/verify-email", async (req, res) => {
   const { token } = req.body;
 
-  console.log(id, token);
-
   try {
-    // Find the user by id
+    // Find the user by verificationToken
     const user = await User.findOne({
-      _id: id,
       verificationToken: token,
     });
+    console.log(user);
 
     if (!user) {
       return res.status(404).json({ message: "Wrong token or user doesn't exist!" });
     }
     if (user?.isVerified) {
-      return res.status(200).json({ message: "Your account is arleady verified!" });
+      return res.status(400).json({ message: "Your account is arleady verified!" });
     }
     const now = new Date();
     const tokenExpiry = new Date(user?.verificationTokenExpiry);

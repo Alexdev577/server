@@ -13,6 +13,10 @@ const affiliationClickSchema = new mongoose.Schema(
       ref: "User",
     },
     userId: String,
+    manager: {
+      type: mongoose.Types.ObjectId,
+      ref: "Manager",
+    },
     price: Number,
     ipAddress: String,
     country: String,

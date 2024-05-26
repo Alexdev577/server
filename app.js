@@ -45,6 +45,10 @@ app.use("/verify-token", tokenVerification);
 const setting = require("./routes/settings.route");
 app.use("/setting", setting);
 
+// reviews
+const reviews = require("./routes/feedback");
+app.use("/send-feedback", reviews);
+
 // users
 const userSignUp = require("./routes/user/userSignup.route");
 const userSignIn = require("./routes/user/userSignin.route");
@@ -104,10 +108,10 @@ app.use("/smartLink", smartLink);
 // Affiliation
 const affiliationRequest = require("./routes/affiliation/affiliationRequest.route");
 const offerClick = require("./routes/affiliation/offer-click.route");
-const getOfferClick = require("./routes/affiliation/getOfferClick.route");
+const getReport = require("./routes/affiliation/getReport.route");
 app.use("/affiliation-request", affiliationRequest);
 app.use("/offer-click", offerClick);
-app.use("/get-offer-click", getOfferClick);
+app.use("/get-report", getReport);
 
 //top
 const topCampaign = require("./routes/top/topCampaign.route");

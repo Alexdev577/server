@@ -61,6 +61,7 @@ router.post("/", async (req, res) => {
       transactionId: transId,
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
+      manager: userInfo?.manager,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -78,6 +79,7 @@ router.post("/", async (req, res) => {
       transactionId: transId,
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
+      manager: userInfo?.manager,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -141,6 +143,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
           transactionId: transId,
           userInfo: userInfo?._id,
           userId: userInfo?.userId,
+          manager: userInfo?.manager,
           ipAddress: data?.ipAddress,
           country: data?.country,
           status: data?.status,
@@ -158,6 +161,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
           transactionId: transId,
           userInfo: userInfo?._id,
           userId: userInfo?.userId,
+          manager: userInfo?.manager,
           ipAddress: data?.ipAddress,
           country: data?.country,
           status: data?.status,
@@ -303,29 +307,48 @@ router.post("/postback", async (req, res) => {
 });
 
 //conversion report status change(by admin)
-router.patch("/status/:id", auth(["ADMIN"]), async (req, res) => {
+router.patch("/status/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
   updateData.updatedAt = new Date();
 
   try {
-    // Find the manager by id field
+    // check if the Transactin details exists
     const exist = await AffiliationClick.findById(id);
 
-    // check if the user exists
     if (!exist) {
-      return res.status(404).json({ message: "Offer clink not found!" });
+      return res.status(404).json({ message: "Transaction details not found!" });
     }
 
-    const result = await AffiliationClick.findOneAndUpdate({ _id: id }, updateData, {
+    await AffiliationClick.findOneAndUpdate({ _id: id }, updateData, {
       upsert: false,
       new: true,
+    }).then(async (result) => {
+      if (!result) {
+        return res.status(500).json({ message: "Couldn't update status!" });
+      }
+      const account = await UserAccount.findOne({ userOid: exist?.userInfo });
+
+      if (exist?.status === "approved" && updateData.status !== "approved") {
+        account.currentBalance -= parseFloat(exist?.price);
+        account.totalRevenue -= parseFloat(exist?.price);
+        await account.save();
+      } else if (exist?.status !== "approved" && updateData.status === "approved") {
+        if (!account) {
+          await UserAccount.create({
+            userOid: exist?.userInfo,
+            totalRevenue: parseFloat(exist?.price),
+            currentBalance: parseFloat(exist?.price),
+          });
+        } else {
+          account.totalRevenue += parseFloat(exist?.price);
+          account.currentBalance += parseFloat(exist?.price);
+          await account.save();
+        }
+      }
     });
 
-    return res.status(200).json({
-      result,
-      message: "Status updated successfully!",
-    });
+    return res.status(200).json({ message: "Status updated successfully!" });
   } catch (error) {
     res.status(500).json({ message: error?.message });
   }

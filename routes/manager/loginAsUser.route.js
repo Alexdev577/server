@@ -12,6 +12,9 @@ router.post("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    if (req?.user?.role === "MANAGER" && req?.user?._id !== user?.manager?.toString()) {
+      return res.status(404).json({ message: "This user isn't associated with you" });
+    }
 
     const access_token = jwt.sign(
       {
