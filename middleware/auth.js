@@ -7,7 +7,7 @@ module.exports = (roles) => {
       // console.log("token", token);
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // console.log(roles, decoded);
+      // console.log("decoded", roles, decoded);
 
       if (!roles?.includes(decoded?.role) || decoded.status !== "active") {
         return res.status(403).json({ message: "Access denied" });

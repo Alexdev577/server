@@ -13,7 +13,7 @@ const sendEmail = async ({ email, name, token, emailType, accountStatus }) => {
 
       // Create a transporter object using SMTP
       const transporter = nodemailer.createTransport({
-        host: "mi3-ts111.a2hosting.com",
+        host: process.env.HOST_NAME,
         port: 465,
         secure: true,
         auth: {

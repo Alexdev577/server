@@ -16,16 +16,11 @@ router.get("/list", auth(["ADMIN", "MANAGER"]), async (req, res) => {
       filter = { role: "MANAGER", _id: req?.user?._id };
     }
 
-    const managerCount = await Manager.countDocuments(filter);
-
     const allManager = await Manager.find(filter).select("-password").sort({
       createdAt: -1,
     });
 
-    res.status(200).json({
-      allData: allManager,
-      dataCount: managerCount,
-    });
+    res.status(200).json(allManager);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }
