@@ -620,13 +620,7 @@ router.get("/quick-report", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     } else {
       pipeline = [
         {
-          $match: {
-            manager: new ObjectId(req?.user?._id),
-            updatedAt: {
-              $gte: new Date(startOfStartDate),
-              $lte: new Date(endOfEndDate + "Z"),
-            },
-          },
+          $match: matchStage,
         },
         {
           $group: {
@@ -951,59 +945,35 @@ router.get("/conversion-report", auth(["ADMIN", "MANAGER"]), async (req, res) =>
       .format("YYYY-MM-DDTHH:mm:ss");
 
     let matchStage;
-    if (req?.user?.role === "MANAGER") {
-      if (userId) {
-        matchStage = {
-          userId,
-          lead: 1,
-          manager: new ObjectId(req?.user?._id),
-          updatedAt: {
-            $gte: new Date(startOfStartDate),
-            $lte: new Date(endOfEndDate + "Z"),
-          },
-        };
-      } else if (transIds) {
-        const searchIds = transIds.split("-");
-        matchStage = {
-          manager: new ObjectId(req?.user?._id),
-          transactionId: { $in: searchIds },
-        };
-      } else {
-        matchStage = {
-          lead: 1,
-          manager: new ObjectId(req?.user?._id),
-          updatedAt: {
-            $gte: new Date(startOfStartDate),
-            $lte: new Date(endOfEndDate + "Z"),
-          },
-        };
-      }
+
+    if (userId) {
+      matchStage = {
+        userId,
+        lead: 1,
+        updatedAt: {
+          $gte: new Date(startOfStartDate),
+          $lte: new Date(endOfEndDate + "Z"),
+        },
+      };
+    } else if (transIds) {
+      const searchIds = transIds.split("-");
+      matchStage = {
+        transactionId: { $in: searchIds },
+      };
     } else {
-      if (userId) {
-        matchStage = {
-          userId,
-          lead: 1,
-          updatedAt: {
-            $gte: new Date(startOfStartDate),
-            $lte: new Date(endOfEndDate + "Z"),
-          },
-        };
-      } else if (transIds) {
-        const searchIds = transIds.split("-");
-        matchStage = {
-          transactionId: { $in: searchIds },
-        };
-      } else {
-        matchStage = {
-          lead: 1,
-          updatedAt: {
-            $gte: new Date(startOfStartDate),
-            $lte: new Date(endOfEndDate + "Z"),
-          },
-        };
-      }
+      matchStage = {
+        lead: 1,
+        updatedAt: {
+          $gte: new Date(startOfStartDate),
+          $lte: new Date(endOfEndDate + "Z"),
+        },
+      };
     }
 
+    if (req?.user?.role === "MANAGER") {
+      matchStage.manager = new ObjectId(req?.user?._id);
+    }
+    console.log(matchStage);
     const pipeline = [
       { $match: matchStage },
       {
