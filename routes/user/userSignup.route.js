@@ -22,8 +22,12 @@ router.get("/", (req, res, next) => {
 router.post("/", (req, res) => {
   const userData = req.body;
 
+  const newName = userData?.name && cleanName(userData?.name);
+  const newUserEmail = userData?.email && cleanEmail(userData?.email);
+  const newUserName = userData?.userName && cleanName(userData?.userName.toLowerCase());
+
   User.findOne({
-    $or: [{ email: userData?.email }, { userName: userData?.userName }],
+    $or: [{ email: newUserEmail }, { userName: newUserName }],
   }).then((result) => {
     if (!result) {
       bcrypt.hash(userData?.password, 10, async (err, hash) => {
@@ -34,16 +38,14 @@ router.post("/", (req, res) => {
         }
         const lastUser = await User.find().sort({ _id: -1 }).limit(1);
 
-        const token = await generateHashToken(userData?.email && cleanEmail(userData?.email)).catch(
-          (err) => console.log(err)
-        );
+        const token = await generateHashToken(newUserEmail).catch((err) => console.log(err));
 
         const user = new User({
           ...userData,
           userId: (parseInt(lastUser[0]?.userId ?? 0) + 1).toString().padStart(4, "0"),
-          name: userData?.name && cleanName(userData?.name),
-          email: userData?.email && cleanEmail(userData?.email),
-          userName: userData?.userName && cleanName(userData?.userName),
+          name: newName,
+          email: newUserEmail,
+          userName: newUserName,
           password: hash,
           verificationToken: token,
           verificationTokenExpiry: new Date(new Date().getTime() + 24 * 60 * 60 * 1000),

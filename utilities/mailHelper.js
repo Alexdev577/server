@@ -47,7 +47,7 @@ const generateMailSubjectAndMessage = ({ emailType, name, token, accountStatus }
         </div>`,
       };
       break;
-    case "acount-status":
+    case "account-status":
       data = {
         subject:
           accountStatus === "active"

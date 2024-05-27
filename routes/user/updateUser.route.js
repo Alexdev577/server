@@ -4,11 +4,16 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const auth = require("../../middleware/auth");
 const { sendEmail } = require("../../utilities/mailer");
+const { cleanName, cleanEmail } = require("../../utilities/dataCleaning");
 
 //Update User by admin or manager
 router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
+
+  const newName = updateData?.name && cleanName(updateData?.name);
+  const newUserEmail = updateData?.email && cleanEmail(updateData?.email);
+  const newUserName = updateData?.userName && cleanName(updateData?.userName.toLowerCase());
 
   try {
     // Find the user by id and exclude the password field
@@ -17,9 +22,9 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
     }
-    if (!user?.isVerified) {
-      return res.status(400).json({ message: "Account is not verified yet!" });
-    }
+    // if (!user?.isVerified) {
+    //   return res.status(400).json({ message: "Account is not verified yet!" });
+    // }
     // check if the required fields are present
     if (!updateData?.email || !updateData?.userName) {
       return res.status(400).json({
@@ -28,7 +33,7 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
     }
     // check if user already exists with the specified email or username, excluding the current user
     const haveUserWithEmail = await User.findOne({
-      $and: [{ email: updateData?.email }, { _id: { $ne: id } }],
+      $and: [{ email: newUserEmail }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithEmail) {
@@ -36,7 +41,7 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
     }
 
     const haveUserWithUsername = await User.findOne({
-      $and: [{ userName: updateData?.userName }, { _id: { $ne: id } }],
+      $and: [{ userName: newUserName }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithUsername) {
@@ -54,17 +59,26 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
             message: "an error occured while generating hash",
           });
         }
-        updateData.password = hash;
 
-        await User.findOneAndUpdate({ _id: id }, updateData, {
-          upsert: false,
-        });
+        await User.findOneAndUpdate(
+          { _id: id },
+          {
+            ...updateData,
+            name: newName,
+            email: newUserEmail,
+            userName: newUserName,
+            password: hash,
+          },
+          {
+            upsert: false,
+          }
+        );
         // send mail if status changed //
         if (updateData?.status !== user?.status) {
           sendEmail({
             name: user?.name,
             email: user?.email,
-            emailType: "acount-status",
+            emailType: "account-status",
             accountStatus: updateData?.status,
           })
             .then((res) => console.log("mail res", res))
@@ -80,7 +94,13 @@ router.patch("/admin/:id", auth(["MANAGER", "ADMIN"]), async (req, res) => {
     if (!updateData?.password) {
       await User.findOneAndUpdate(
         { _id: id },
-        { ...updateData, password: user?.password },
+        {
+          ...updateData,
+          name: newName,
+          email: newUserEmail,
+          userName: newUserName,
+          password: user?.password,
+        },
         {
           upsert: false,
         }
@@ -111,6 +131,10 @@ router.patch("/user/:id", auth(["USER"]), async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
 
+  const newName = updateData?.name && cleanName(updateData?.name);
+  const newUserEmail = updateData?.email && cleanEmail(updateData?.email);
+  const newUserName = updateData?.userName && cleanName(updateData?.userName.toLowerCase());
+
   try {
     // Find the user by id and exclude the password field
     const user = await User.findById(id);
@@ -126,7 +150,7 @@ router.patch("/user/:id", auth(["USER"]), async (req, res) => {
     }
     // check if user already exists with the specified email or username, excluding the current user
     const haveUserWithEmail = await User.findOne({
-      $and: [{ email: updateData?.email }, { _id: { $ne: id } }],
+      $and: [{ email: newUserEmail }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithEmail) {
@@ -134,7 +158,7 @@ router.patch("/user/:id", auth(["USER"]), async (req, res) => {
     }
 
     const haveUserWithUsername = await User.findOne({
-      $and: [{ userName: updateData?.userName }, { _id: { $ne: id } }],
+      $and: [{ userName: newUserName }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithUsername) {
@@ -159,12 +183,21 @@ router.patch("/user/:id", auth(["USER"]), async (req, res) => {
               message: "an error occured while generating hash",
             });
           }
-          updateData.password = hash;
 
-          const result = await User.findOneAndUpdate({ _id: id }, updateData, {
-            upsert: true,
-            new: true,
-          }).select("-password");
+          const result = await User.findOneAndUpdate(
+            { _id: id },
+            {
+              ...updateData,
+              name: newName,
+              email: newUserEmail,
+              userName: newUserName,
+              password: hash,
+            },
+            {
+              upsert: false,
+              new: true,
+            }
+          ).select("-password");
 
           return res.status(200).json({
             result,
@@ -174,10 +207,20 @@ router.patch("/user/:id", auth(["USER"]), async (req, res) => {
       });
     }
     if (!updateData?.newPassword) {
-      const result = await User.findOneAndUpdate({ _id: id }, updateData, {
-        upsert: true,
-        new: true,
-      }).select("-password");
+      const result = await User.findOneAndUpdate(
+        { _id: id },
+        {
+          ...updateData,
+          name: newName,
+          email: newUserEmail,
+          userName: newUserName,
+          password: user?.password,
+        },
+        {
+          upsert: false,
+          new: true,
+        }
+      ).select("-password");
 
       return res.status(200).json({
         result,
