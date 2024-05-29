@@ -6,6 +6,7 @@ const auth = require("../../middleware/auth");
 const { cleanName } = require("../../utilities/dataCleaning");
 const router = express.Router();
 
+// ================ MEHTHODs ================== //
 // new payment method creation
 router.post("/create-method", auth(["ADMIN"]), async (req, res) => {
   const { name } = req.body;
@@ -57,6 +58,7 @@ router.delete("/delete-method/:id", auth(["ADMIN"]), async (req, res) => {
   }
 });
 
+// ================ USER OPTIONS ================== //
 // get all user payout option data
 router.get("/user-option", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   try {
@@ -87,8 +89,9 @@ router.get("/user-option/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, r
 });
 
 // update payout option data by user auth(["USER"]),
-router.patch("/user-option/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
+router.patch("/user-option/:id", auth(["ADMIN", "USER"]), async (req, res) => {
   const { id } = req.params;
+  console.log(id);
   const updateData = req.body;
   try {
     const method = await PayoutMethodType.findOne({ name: updateData?.paymentMethod });

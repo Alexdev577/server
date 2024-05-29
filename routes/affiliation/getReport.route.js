@@ -973,7 +973,7 @@ router.get("/conversion-report", auth(["ADMIN", "MANAGER"]), async (req, res) =>
     if (req?.user?.role === "MANAGER") {
       matchStage.manager = new ObjectId(req?.user?._id);
     }
-    console.log(matchStage);
+
     const pipeline = [
       { $match: matchStage },
       {

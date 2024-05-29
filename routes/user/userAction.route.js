@@ -27,11 +27,9 @@ router.delete("/delete/:id", auth("ADMIN"), async (req, res) => {
 });
 
 //* send verification code and token
-router.post("/send-verification-link/:id", async (req, res) => {
-  const { id } = req.params;
-
+router.post("/send-verification-link", auth(["USER"]), async (req, res) => {
   try {
-    const user = await User.findById(id);
+    const user = await User.findById(req?.user?._id);
 
     if (!user) {
       return res.status(404).json({ message: "User doesn't exist!" });

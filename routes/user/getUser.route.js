@@ -103,10 +103,10 @@ router.get("/affiliate-manager", auth(["USER"]), async (req, res) => {
 //get pending user
 router.get("/pending-request", async (req, res) => {
   try {
-    const requestCount = await User.countDocuments({ status: "pending" });
+    const count = await User.countDocuments({ status: "pending" });
 
     return res.status(200).json({
-      dataCount: requestCount,
+      dataCount: count,
     });
   } catch (error) {
     return res.status(500).json({ message: error?.message });

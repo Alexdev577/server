@@ -32,11 +32,9 @@ router.get("/single/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   }
   try {
     const id = req.params.id;
-    const allManager = await Manager.findById(id).select("-password");
+    const manager = await Manager.findById(id).select("-password");
 
-    res.status(200).json({
-      allData: allManager,
-    });
+    res.status(200).json(manager);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }

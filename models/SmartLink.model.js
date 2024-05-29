@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const smartLinkSchema = new mongoose.Schema(
   {
-    campaignId: String,
+    campaignId: { type: String, default: "0001" },
     campaignName: { type: String, required: true },
     commission: { type: Number, default: 0 },
     priceCut: { type: Number, default: 0 },
