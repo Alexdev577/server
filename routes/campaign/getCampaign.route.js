@@ -8,8 +8,24 @@ const { ObjectId } = require("mongodb");
 const { cleanUrl } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");
 
+//get public offer details
+router.get("/offer-details", async (req, res) => {
+  if (!cleanUrl(req.originalUrl)) {
+    return res.status(400).json({ message: "bad request" });
+  }
+  try {
+    const offerDetails = await Campaign.find().select(
+      "-_id campaignId campaignName category price previewLink countries description"
+    );
+
+    res.status(200).json(offerDetails);
+  } catch (err) {
+    res.status(500).json({ message: err?.message });
+  }
+});
+
 //get list of campaigns
-router.get("/list", async (req, res) => {
+router.get("/list", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }
@@ -27,7 +43,7 @@ router.get("/list", async (req, res) => {
 });
 
 //get filtered campaigns
-router.get("/", async (req, res) => {
+router.get("/", auth(["USER", "MANAGER", "ADMIN"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }
@@ -120,11 +136,11 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           $and: [
             offer
               ? {
-                $or: [
-                  { "offerData.campaignId": { $eq: offer } },
-                  { "offerData.campaignName": { $regex: offer, $options: "i" } },
-                ],
-              }
+                  $or: [
+                    { "offerData.campaignId": { $eq: offer } },
+                    { "offerData.campaignName": { $regex: offer, $options: "i" } },
+                  ],
+                }
               : {},
             category && category !== "all" ? { "offerData.category": category } : {},
             conversionType && conversionType !== "all"
@@ -146,7 +162,7 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           approvedAt: "$approvedAt",
           countries: "$offerData.countries",
           price: "$offerData.price",
-          offerApprovalStatus: "$status"
+          offerApprovalStatus: "$status",
         },
       },
     ];

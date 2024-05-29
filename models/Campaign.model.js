@@ -12,6 +12,10 @@ const campaignSchema = new mongoose.Schema(
     counter: { type: Number, default: 1 },
     status: { type: String, default: "active" },
     deviceType: { type: String, default: "mobile-and-desktop" },
+    imageData: {
+      publicId: String,
+      imageUrl: String,
+    },
     campaignUrl: String,
     previewLink: String,
     countries: [String],

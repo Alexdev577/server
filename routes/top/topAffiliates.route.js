@@ -7,7 +7,7 @@ const auth = require("../../middleware/auth");
 const router = express.Router();
 
 // top affiliates
-router.get("/", auth(["ADMIN"]), async (req, res) => {
+router.get("/", auth(["MANAGER", "ADMIN"]), async (req, res) => {
   try {
     const today = new Date();
     const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 10);

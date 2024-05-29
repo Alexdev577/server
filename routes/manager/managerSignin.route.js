@@ -26,7 +26,7 @@ router.post("/", (req, res) => {
   const { email, password } = req.body;
 
   Manager.findOne({
-    $or: [{ email: email }, { userName: email }],
+    $or: [{ email: email }, { userName: email.toLowerCase() }],
   })
     .then((login) => {
       if (!login) {

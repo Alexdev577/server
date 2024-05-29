@@ -10,6 +10,7 @@ const UserAccount = require("../../models/UserAccount.model");
 const Notification = require("../../models/Notification.model");
 
 const auth = require("../../middleware/auth");
+const { ObjectId } = require("mongodb");
 const router = express.Router();
 
 // create invoice-request on admin specified date
@@ -276,19 +277,59 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
 
 //get invoice
 router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res) => {
+  const { status } = req.query;
   try {
     let filter = {};
 
     if (req?.user?.role === "USER") {
-      filter.userOid = req?.user?._id;
+      filter.userOid = new ObjectId(req?.user?._id);
     }
-    const invoice = await Invoice.find(filter);
+    if (status) {
+      filter.paymentStatus = status;
+    }
 
-    if (!invoice) {
+    const pipeline = [
+      { $match: filter },
+      {
+        $lookup: {
+          from: "paymentmethodusers",
+          localField: "userOid",
+          foreignField: "userOid",
+          as: "payoutMethod",
+        },
+      },
+      { $addFields: { payoutMethod: { $arrayElemAt: ["$payoutMethod", 0] } } },
+      {
+        $project: {
+          _id: 1,
+          invoiceId: 1,
+          userOid: 1,
+          paymentAmount: 1,
+          paymentStatus: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          payoutMethod: "$payoutMethod.paymentMethod",
+          payoutEmail: "$payoutMethod.email",
+          cryptoAddress: "$payoutMethod.cryptoAddress",
+          cryptoType: "$payoutMethod.cryptoType",
+        },
+      },
+    ];
+    const invoices = await Invoice.aggregate(pipeline);
+    // const invoices = await Invoice.find(filter).populate([
+    //   {
+    //     path: "userOid",
+    //     model: "PaymentMethodUser",
+    //     foreignField: "userOid",
+    //     select: "-_id paymentMethod email cryptoType cryptoAddress",
+    //   },
+    // ]);
+
+    if (!invoices) {
       return res.status(404).json({ message: "No invoice found!" });
     }
 
-    res.status(200).json(invoice);
+    res.status(200).json(invoices);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }

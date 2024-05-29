@@ -21,16 +21,20 @@ router.get("/", (req, res) => {
 router.post("/create", auth(["ADMIN"]), async (req, res) => {
   const managerData = req.body;
 
+  const newName = managerData?.name && cleanName(managerData?.name);
+  const newUserEmail = managerData?.email && cleanEmail(managerData?.email);
+  const newUserName = managerData?.userName && cleanName(managerData?.userName.toLowerCase());
+
   // check manager with same email
   const haveUserWithEmail = await Manager.findOne({
-    email: managerData?.email,
+    email: newUserEmail,
   });
   if (haveUserWithEmail) {
     return res.status(400).json({ message: "Email already in use!" });
   }
   // check manager with same username
   const haveUserWithUsername = await Manager.findOne({
-    userName: managerData?.userName,
+    userName: newUserName,
   });
   if (haveUserWithUsername) {
     return res.status(400).json({ message: "Username already in use!" });
@@ -48,9 +52,9 @@ router.post("/create", auth(["ADMIN"]), async (req, res) => {
     const manager = new Manager({
       ...managerData,
       managerId,
-      name: managerData?.name && cleanName(managerData?.name),
-      email: managerData?.email && cleanEmail(managerData?.email),
-      userName: managerData?.userName && cleanName(managerData?.userName),
+      name: newName,
+      email: newUserEmail,
+      userName: newUserName,
       password: hash,
     });
 
@@ -80,12 +84,19 @@ router.patch("/update/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
 
+  const newName = updateData?.name && cleanName(updateData?.name);
+  const newUserEmail = updateData?.email && cleanEmail(updateData?.email);
+  const newUserName = updateData?.userName && cleanName(updateData?.userName.toLowerCase());
+
   try {
     // Find the manager by id field
     const user = await Manager.findById(id);
     // check if the user exists
     if (!user) {
       return res.status(404).json({ message: "Manager not found!" });
+    }
+    if (req?.user?.role === "MANAGER" && req?.user?._id !== user?._id) {
+      return res.status(404).json({ message: "Access denied!" });
     }
     if (user.role === "ADMIN") {
       return res.status(401).json({ message: "Unauthorized!" });
@@ -99,7 +110,7 @@ router.patch("/update/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     }
     // check if user already exists with the specified email or username, excluding the current user
     const haveUserWithEmail = await Manager.findOne({
-      $and: [{ email: updateData?.email }, { _id: { $ne: id } }],
+      $and: [{ email: newUserEmail }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithEmail) {
@@ -107,7 +118,7 @@ router.patch("/update/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     }
 
     const haveUserWithUsername = await Manager.findOne({
-      $and: [{ userName: updateData?.userName }, { _id: { $ne: id } }],
+      $and: [{ userName: newUserName }, { _id: { $ne: id } }],
     });
 
     if (haveUserWithUsername) {
@@ -121,12 +132,21 @@ router.patch("/update/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
             message: "an error occured while generating hash",
           });
         }
-        updateData.password = hash;
 
-        const result = await Manager.findOneAndUpdate({ _id: id }, updateData, {
-          upsert: false,
-          new: true,
-        }).select("-password");
+        const result = await Manager.findOneAndUpdate(
+          { _id: id },
+          {
+            ...updateData,
+            name: newName,
+            email: newUserEmail,
+            userName: newUserName,
+            password: hash,
+          },
+          {
+            upsert: false,
+            new: true,
+          }
+        ).select("-password");
 
         return res.status(200).json({
           result,
@@ -135,11 +155,20 @@ router.patch("/update/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
       });
     }
     if (!updateData?.password) {
-      updateData.password = user?.password;
-      const result = await Manager.findOneAndUpdate({ _id: id }, updateData, {
-        upsert: false,
-        new: true,
-      }).select("-password");
+      const result = await Manager.findOneAndUpdate(
+        { _id: id },
+        {
+          ...updateData,
+          name: newName,
+          email: newUserEmail,
+          userName: newUserName,
+          password: user?.password,
+        },
+        {
+          upsert: false,
+          new: true,
+        }
+      ).select("-password");
 
       return res.status(200).json({
         result,
