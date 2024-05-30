@@ -5,6 +5,7 @@ const campaignSchema = new mongoose.Schema(
     campaignId: String,
     campaignName: { type: String, required: true },
     category: String,
+    advertiser: String,
     conversionType: String,
     trafficType: String,
     price: Number,

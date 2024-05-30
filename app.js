@@ -87,6 +87,10 @@ app.use("/notification", notification);
 const campaignCategory = require("./routes/campaign/campaignCategory.route");
 app.use("/campaign-category", campaignCategory);
 
+//Advertiser
+const advertiser = require("./routes/campaign/advertiser.route");
+app.use("/advertiser", advertiser);
+
 //Conversion Type
 const conversionType = require("./routes/campaign/conversionType.route");
 app.use("/conversion-type", conversionType);

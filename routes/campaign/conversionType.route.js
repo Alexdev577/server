@@ -34,15 +34,13 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
 });
 
 // get all conversion types
-router.get("/", async (req, res) => {
+router.get("/", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   try {
     const allTypes = await ConversionType.find().sort({
       name: 1,
     });
 
-    res.status(200).json({
-      data: allTypes,
-    });
+    res.status(200).json(allTypes);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }
@@ -52,15 +50,13 @@ router.get("/", async (req, res) => {
 router.delete("/:id", auth(["ADMIN"]), async (req, res) => {
   const { id } = req.params;
   try {
-    const exists = await ConversionType.findById(id);
-
-    if (!exists) {
-      return res.status(404).json({ message: "Item not found!" });
-    }
     const result = await ConversionType.findOneAndDelete({ _id: id });
 
+    if (!result) {
+      return res.status(404).json({ message: "Conversion type not found!" });
+    }
+
     res.status(200).json({
-      result,
       message: "Item successfully deleted!",
     });
   } catch (error) {

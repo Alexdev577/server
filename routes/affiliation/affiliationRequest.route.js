@@ -69,16 +69,12 @@ router.post("/", auth(["USER"]), async (req, res) => {
 //get campaign request
 router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    const requestCount = await AffiliationRequest.countDocuments();
     const result = await AffiliationRequest.find().populate([
       { path: "campaign" },
       { path: "userInfo", select: "name userName email imageData socialLink status" },
     ]);
 
-    return res.status(200).json({
-      allData: result,
-      dataCount: requestCount,
-    });
+    return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }

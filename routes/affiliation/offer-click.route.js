@@ -27,14 +27,19 @@ router.post("/", async (req, res) => {
       campaignInfo = await SmartLink.findOne({ campaignId: offerId });
 
       if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found!" });
+        return res.status(404).json({ message: "Offer not found" });
       }
     } else {
       campaignInfo = await Campaign.findOne({ campaignId: offerId });
 
       if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found!" });
+        return res.status(404).json({ message: "Offer not found" });
       }
+
+      if (campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "This offer isn't active now" });
+      }
+
       const offerRequest = await AffiliationRequest.findOne({
         campaign: campaignInfo?._id,
         userInfo: userInfo?._id,
@@ -116,10 +121,16 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
       if (!campaignInfo || !userInfo) {
         return res.status(404).json({ message: "Offer not found!" });
       }
+
+      if (campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "This offer isn't active now" });
+      }
+
       const offerRequest = await AffiliationRequest.findOne({
         campaign: campaignInfo?._id,
         userInfo: userInfo?._id,
       });
+
       if (!offerRequest || offerRequest?.status !== "approved") {
         return res.status(404).json({ message: "no active affiliation found!" });
       }
