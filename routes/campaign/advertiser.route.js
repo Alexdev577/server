@@ -1,6 +1,6 @@
 // require
 const express = require("express");
-const TrafficType = require("../../models/TrafficType.model");
+const Advertizer = require("../../models/Advertiser.model");
 const { cleanName } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");
 const router = express.Router();
@@ -8,12 +8,12 @@ const router = express.Router();
 // new traffic type creation
 router.post("/", auth(["ADMIN"]), async (req, res) => {
   const { name } = req.body;
-  const trafficType = name && cleanName(name);
+  const advertiser = name && cleanName(name);
 
   // check type with the same name
-  const exists = await TrafficType.findOne({
+  const exists = await Advertizer.findOne({
     name: {
-      $regex: trafficType,
+      $regex: advertiser,
       $options: "i",
     },
   });
@@ -21,11 +21,11 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
     return res.status(400).json({ message: "Item already exists!" });
   }
 
-  const singleType = new TrafficType({
-    name: trafficType.charAt(0).toUpperCase() + trafficType.slice(1),
+  const newAdvertiser = new Advertizer({
+    name: advertiser.charAt(0).toUpperCase() + advertiser.slice(1),
   });
 
-  await singleType.save();
+  await newAdvertiser.save();
 
   return res.status(200).json({
     message: "Item created successfully!",
@@ -35,11 +35,11 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
 // get all traffic types
 router.get("/", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   try {
-    const allTypes = await TrafficType.find().sort({
+    const data = await Advertizer.find().sort({
       name: 1,
     });
 
-    res.status(200).json(allTypes);
+    res.status(200).json(data);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }
@@ -49,12 +49,12 @@ router.get("/", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
 router.delete("/:id", auth(["ADMIN"]), async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await TrafficType.findOneAndDelete({ _id: id });
+    const result = await Advertizer.findOneAndDelete({ _id: id });
     if (!result) {
-      return res.status(404).json({ message: "Traffic type not found!" });
+      return res.status(404).json({ message: "Advertiser not found!" });
     }
+
     res.status(200).json({
-      result,
       message: "Item successfully deleted!",
     });
   } catch (error) {

@@ -34,15 +34,13 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
 });
 
 // get all campaign category
-router.get("/", async (req, res) => {
+router.get("/", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   try {
     const allCategories = await CampaignCategory.find().sort({
       name: 1,
     });
 
-    res.status(200).json({
-      data: allCategories,
-    });
+    res.status(200).json(allCategories);
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }
@@ -52,15 +50,11 @@ router.get("/", async (req, res) => {
 router.delete("/:id", auth(["ADMIN"]), async (req, res) => {
   const { id } = req.params;
   try {
-    const exists = await CampaignCategory.findById(id);
-
-    if (!exists) {
+    const result = await CampaignCategory.findOneAndDelete({ _id: id });
+    if (!result) {
       return res.status(404).json({ message: "Category not found!" });
     }
-    const result = await CampaignCategory.findOneAndDelete({ _id: id });
-
     res.status(200).json({
-      result,
       message: "Category successfully deleted!",
     });
   } catch (error) {
