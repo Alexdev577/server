@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
         {
           $group: {
             _id: "$offerId",
-            ImageData: { $first: "$imageData" },
+            imageData: { $first: "$campaign.imageData" },
             offerName: { $first: "$offerName" },
             price: { $first: "$price" },
             conversionType: { $first: "$campaign.conversionType" },
@@ -63,7 +63,7 @@ router.get("/", async (req, res) => {
         {
           $project: {
             _id: 0,
-            ImageData: 1,
+            imageData: 1,
             offerId: "$_id",
             offerName: 1,
             price: 1,

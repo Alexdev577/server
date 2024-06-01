@@ -136,11 +136,11 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           $and: [
             offer
               ? {
-                  $or: [
-                    { "offerData.campaignId": { $eq: offer } },
-                    { "offerData.campaignName": { $regex: offer, $options: "i" } },
-                  ],
-                }
+                $or: [
+                  { "offerData.campaignId": { $eq: offer } },
+                  { "offerData.campaignName": { $regex: offer, $options: "i" } },
+                ],
+              }
               : {},
             category && category !== "all" ? { "offerData.category": category } : {},
             conversionType && conversionType !== "all"
@@ -154,6 +154,7 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
       {
         $project: {
           _id: "$_id",
+          imageData: { imageUrl: "$offerData.imageData.imageUrl" },
           campaignId: "$offerData.campaignId",
           campaignName: "$offerData.campaignName",
           category: "$offerData.category",
