@@ -5,7 +5,11 @@ const topCampaignSchema = new mongoose.Schema(
     offerId: String,
     imageData: {
       publicId: String,
-      imageUrl: String,
+      imageUrl: {
+        type: String,
+        default:
+          "https://res.cloudinary.com/dmw7e4fcy/image/upload/v1717089594/affburg/a7omwox3ldqft5yvfut0.png",
+      },
     },
     offerName: String,
     price: Number,

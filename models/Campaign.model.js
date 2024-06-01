@@ -15,7 +15,11 @@ const campaignSchema = new mongoose.Schema(
     deviceType: { type: String, default: "mobile-and-desktop" },
     imageData: {
       publicId: String,
-      imageUrl: String,
+      imageUrl: {
+        type: String,
+        default:
+          "https://res.cloudinary.com/dmw7e4fcy/image/upload/v1717089594/affburg/a7omwox3ldqft5yvfut0.png",
+      },
     },
     campaignUrl: String,
     previewLink: String,

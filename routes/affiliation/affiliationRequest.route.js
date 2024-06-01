@@ -6,6 +6,7 @@ const User = require("../../models/User.model");
 const Notification = require("../../models/Notification.model");
 const auth = require("../../middleware/auth");
 const { mySimpleEncoder } = require("../../utilities/encoderDecoder.js");
+const { pipeline } = require("nodemailer/lib/xoauth2/index.js");
 
 // router
 const router = express.Router();
@@ -69,12 +70,50 @@ router.post("/", auth(["USER"]), async (req, res) => {
 //get campaign request
 router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    const result = await AffiliationRequest.find().populate([
-      { path: "campaign" },
-      { path: "userInfo", select: "name userName email imageData socialLink status" },
-    ]);
+    const pipeline = [
+      {
+        $match: {},
+      },
+      {
+        $lookup: {
+          from: "campaigns",
+          localField: "campaign",
+          foreignField: "_id",
+          as: "campaign",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userInfo",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      {
+        $addFields: {
+          campaign: { $arrayElemAt: ["$campaign", 0] },
+          userInfo: { $arrayElemAt: ["$userInfo", 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          campaignId: "$campaign.campaignId",
+          campaignName: "$campaign.campaignName",
+          imageURL: "$campaign.imageData.imageUrl",
+          trafficType: "$campaign.trafficType",
+          userId: "$userInfo.userId",
+          userName: "$userInfo.name",
+          status: 1,
+          createdAt: 1,
+        },
+      },
+    ];
 
-    return res.status(200).json(result);
+    const requests = await AffiliationRequest.aggregate(pipeline);
+
+    return res.status(200).json(requests);
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }
