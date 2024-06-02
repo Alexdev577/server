@@ -563,7 +563,7 @@ router.get("/quick-report", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     if (req?.user?.role === "MANAGER") {
       matchStage.manager = new ObjectId(req?.user?._id);
     }
-
+    console.log(matchStage);
     if (startDate && endDate && startDate !== endDate) {
       pipeline = [
         {

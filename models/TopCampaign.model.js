@@ -8,7 +8,7 @@ const topCampaignSchema = new mongoose.Schema(
       imageUrl: {
         type: String,
         default:
-          "https://res.cloudinary.com/dmw7e4fcy/image/upload/v1717089594/affburg/a7omwox3ldqft5yvfut0.png",
+          "https://res.cloudinary.com/dmw7e4fcy/image/upload/v1717304545/affburg/all%20icons/Asset_4_fhiu2u.png",
       },
     },
     offerName: String,

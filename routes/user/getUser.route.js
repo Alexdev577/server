@@ -65,6 +65,63 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     res.status(500).json({ message: err?.message });
   }
 });
+// get filtered users with pagination and sorting
+router.get("/manager-affiliates", auth(["MANAGER"]), async (req, res) => {
+  if (!cleanUrl(req.originalUrl)) {
+    return res.status(400).json({ message: "bad request" });
+  }
+  const { startDate, endDate, searchTerm, status } = req.query;
+  const filterableFields = ["userId", "userName", "email", "name", "phone"];
+
+  try {
+    const conditions = [{ manager: req?.user?._id }];
+
+    // Add searchTerm condition if present
+    if (searchTerm) {
+      conditions.push({
+        $or: filterableFields.map((field) => ({
+          [field]: {
+            $regex: searchTerm,
+            $options: "i",
+          },
+        })),
+      });
+    } else {
+      if (startDate && endDate && startDate !== endDate) {
+        // modify startDate and endDate
+        const modStartDate = new Date(startDate);
+        modStartDate.setHours(0);
+        modStartDate.setMinutes(0);
+        modStartDate.setSeconds(0);
+        const modEndDate = new Date(endDate);
+        modEndDate.setHours(0);
+        modEndDate.setMinutes(0);
+        modEndDate.setSeconds(0);
+
+        conditions.push({
+          createdAt: {
+            $gte: modStartDate,
+            $lte: modEndDate,
+          },
+        });
+      }
+      if (status) {
+        conditions.push({
+          status: status,
+        });
+      }
+    }
+
+    // final query
+    const query = conditions.length > 0 ? { $and: conditions } : {};
+
+    const result = await User.find(query).select("-password");
+
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json({ message: err?.message });
+  }
+});
 
 //* get single users data
 router.get("/single/:id", async (req, res) => {

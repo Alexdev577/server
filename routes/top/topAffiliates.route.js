@@ -48,7 +48,7 @@ router.get("/", auth(["MANAGER", "ADMIN"]), async (req, res) => {
         },
       },
       {
-        $limit: 10,
+        $limit: 15,
       },
       {
         $project: {
