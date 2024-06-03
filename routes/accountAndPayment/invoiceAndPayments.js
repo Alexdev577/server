@@ -54,7 +54,7 @@ router.get("/create-invoice", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 });
 
 // get invoice-request list
-router.get("/invoice-requests", auth(["ADMIN"]), async (req, res) => {
+router.get("/invoice-requests", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const pipeline = [
       {
@@ -112,7 +112,7 @@ router.get("/invoice-requests", auth(["ADMIN"]), async (req, res) => {
 });
 
 // get invoice-request details by id
-router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
+router.get("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { id } = req.params;
   try {
     const pipeline = [
@@ -137,14 +137,6 @@ router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
       },
       {
         $lookup: {
-          from: "paymentmethodusers",
-          localField: "userInfo.userId",
-          foreignField: "userId",
-          as: "paymentMethod",
-        },
-      },
-      {
-        $lookup: {
           from: "managers",
           localField: "userInfo.manager",
           foreignField: "_id",
@@ -154,7 +146,6 @@ router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
       {
         $addFields: {
           userInfo: { $arrayElemAt: ["$userInfo", 0] },
-          paymentMethod: { $arrayElemAt: ["$paymentMethod", 0] },
           manager: { $arrayElemAt: ["$manager", 0] },
         },
       },
@@ -176,9 +167,6 @@ router.get("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
           address: "$userInfo.address",
 
           manager: "$manager.name",
-
-          paymentMethod: "$paymentMethod.paymentMethod",
-          paymentEmail: "$paymentMethod.email",
         },
       },
     ];
@@ -279,7 +267,7 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
 router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res) => {
   const { status } = req.query;
   try {
-    let filter = {};
+    const filter = {};
 
     if (req?.user?.role === "USER") {
       filter.userOid = new ObjectId(req?.user?._id);
@@ -316,15 +304,7 @@ router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res)
       },
     ];
     const invoices = await Invoice.aggregate(pipeline);
-    // const invoices = await Invoice.find(filter).populate([
-    //   {
-    //     path: "userOid",
-    //     model: "PaymentMethodUser",
-    //     foreignField: "userOid",
-    //     select: "-_id paymentMethod email cryptoType cryptoAddress",
-    //   },
-    // ]);
-
+  
     if (!invoices) {
       return res.status(404).json({ message: "No invoice found!" });
     }

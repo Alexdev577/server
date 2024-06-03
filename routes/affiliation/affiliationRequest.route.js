@@ -6,6 +6,7 @@ const User = require("../../models/User.model");
 const Notification = require("../../models/Notification.model");
 const auth = require("../../middleware/auth");
 const { mySimpleEncoder } = require("../../utilities/encoderDecoder.js");
+const { ObjectId } = require("mongodb");
 
 // router
 const router = express.Router();
@@ -36,8 +37,9 @@ router.post("/", auth(["USER"]), async (req, res) => {
     }
 
     const campaignReq = new AffiliationRequest({
-      campaign: requestData?.campaign,
-      userInfo: req?.user?._id,
+      campaign: offerData?._id,
+      userInfo: userInfo?._id,
+      manager: userInfo?.manager,
     });
 
     campaignReq.save().then(async (result) => {
@@ -69,12 +71,54 @@ router.post("/", auth(["USER"]), async (req, res) => {
 //get campaign request
 router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    const result = await AffiliationRequest.find().populate([
-      { path: "campaign" },
-      { path: "userInfo", select: "name userName email imageData socialLink status" },
-    ]);
+    const matchStage = {};
+    if (req?.user?.role === "MANAGER") {
+      matchStage.manager = new ObjectId(req?.user?._id);
+    }
+    const pipeline = [
+      {
+        $match: matchStage,
+      },
+      {
+        $lookup: {
+          from: "campaigns",
+          localField: "campaign",
+          foreignField: "_id",
+          as: "campaign",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userInfo",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      {
+        $addFields: {
+          campaign: { $arrayElemAt: ["$campaign", 0] },
+          userInfo: { $arrayElemAt: ["$userInfo", 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          campaignId: "$campaign.campaignId",
+          campaignName: "$campaign.campaignName",
+          imageURL: "$campaign.imageData.imageUrl",
+          trafficType: "$campaign.trafficType",
+          userId: "$userInfo.userId",
+          userName: "$userInfo.name",
+          status: 1,
+          createdAt: 1,
+        },
+      },
+    ];
 
-    return res.status(200).json(result);
+    const requests = await AffiliationRequest.aggregate(pipeline);
+
+    return res.status(200).json(requests);
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }
@@ -83,9 +127,11 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 //get pending request
 router.get("/pending-request", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
-    const requestCount = await AffiliationRequest.countDocuments({
-      status: "pending",
-    });
+    const filter = { status: "pending" };
+    if (req?.user?.role === "MANAGER") {
+      filter.manager = new ObjectId(req?.user?._id);
+    }
+    const requestCount = await AffiliationRequest.countDocuments(filter);
 
     return res.status(200).json({
       dataCount: requestCount,
@@ -128,6 +174,10 @@ router.patch("/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     }
     if (request && request?.campaign.status !== "active") {
       return res.status(406).json({ message: "offer is not active now!" });
+    }
+
+    if (req?.user?.role === "MANAGER" && req?.user?._id !== request?.manager?.toString()) {
+      return res.status(406).json({ message: "Unauthorized access" });
     }
 
     const updatedDoc = { status };
