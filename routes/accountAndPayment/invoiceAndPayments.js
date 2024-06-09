@@ -10,7 +10,6 @@ const UserAccount = require("../../models/UserAccount.model");
 const Notification = require("../../models/Notification.model");
 
 const auth = require("../../middleware/auth");
-const { ObjectId } = require("mongodb");
 const router = express.Router();
 
 // create invoice-request on admin specified date
@@ -31,7 +30,7 @@ router.get("/create-invoice", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 
         setting.invoiceFlag = false;
         await setting.save();
-        return res.status(200).json({
+        return res.status(201).json({
           message: "Invoice created",
         });
       } else {
@@ -56,6 +55,11 @@ router.get("/create-invoice", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 // get invoice-request list
 router.get("/invoice-requests", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
+    const conditionalMatchStage = {};
+    if (req?.user?.role === "MANAGER") {
+      conditionalMatchStage["userInfo.manager"] = req?.user?._id;
+    }
+
     const pipeline = [
       {
         $match: {},
@@ -91,8 +95,12 @@ router.get("/invoice-requests", auth(["ADMIN", "MANAGER"]), async (req, res) => 
         },
       },
       {
+        $match: conditionalMatchStage,
+      },
+      {
         $project: {
           _id: 1,
+          userId: "$userInfo.userId",
           name: "$userInfo.name",
           email: "$userInfo.email",
           paymentAmount: 1,
@@ -115,6 +123,11 @@ router.get("/invoice-requests", auth(["ADMIN", "MANAGER"]), async (req, res) => 
 router.get("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { id } = req.params;
   try {
+    const conditionalMatchStage = {};
+    if (req?.user?.role === "MANAGER") {
+      conditionalMatchStage["userInfo.manager"] = req?.user?._id;
+    }
+
     const pipeline = [
       {
         $match: { invoiceId: id },
@@ -150,6 +163,9 @@ router.get("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, res)
         },
       },
       {
+        $match: conditionalMatchStage,
+      },
+      {
         $project: {
           _id: 1,
           userOid: 1,
@@ -179,24 +195,32 @@ router.get("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, res)
 });
 
 // update invoice-request and create final invoice for user
-router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
+router.patch("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const { id } = req.params;
   const dataToUpdate = req.body;
 
   try {
-    const invoiceRequest = await InvoiceRequest.findOne({ invoiceId: id });
+    const invoiceRequest = await InvoiceRequest.findOne({ invoiceId: id }).populate([
+      {
+        path: "userOid",
+        select: "manager",
+      },
+    ]);
+
     if (!invoiceRequest) {
       return res.status(404).json({ message: "No invoice found!" });
     }
 
+    if (req?.user?.role === "MANAGER" && !req?.user?._id.equals(invoiceRequest?.userOid?.manager)) {
+      return res.status(401).json({ message: "Unauthorized access!" });
+    }
+
     //check if offers are unpaid?
-    const unpaidOffersData = [];
     const ids = dataToUpdate.map((data) => data._id);
-    const weeklyClicks = await WeeklyOfferwiseClick.find({
+    const unpaidOffersData = await WeeklyOfferwiseClick.find({
       _id: { $in: ids },
       paymentStatus: "unpaid",
     });
-    unpaidOffersData.push(...weeklyClicks);
 
     if (unpaidOffersData.length < 1) {
       return res.status(404).json({ message: "No unpaid offer available!" });
@@ -207,14 +231,14 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
     const unpaidOfferIds = unpaidOffersData.map((data) => data._id);
     const allTransIds = unpaidOffersData.reduce((acc, data) => acc.concat(data.transIds || []), []);
 
-    // Batch update WeeklyOfferwiseClick documents
+    // Batch update WeeklyOfferwiseClick collection
     await WeeklyOfferwiseClick.updateMany(
       { _id: { $in: unpaidOfferIds } },
       { paymentStatus: "paid" },
       { upsert: false }
     );
 
-    // Batch update AffiliationClick and AdAffiliationClick documents
+    // Batch update AffiliationClick and AdAffiliationClick collection
     await AffiliationClick.updateMany(
       { transactionId: { $in: allTransIds } },
       { paymentStatus: "paid" },
@@ -264,20 +288,33 @@ router.patch("/invoice-requests/:id", auth(["ADMIN"]), async (req, res) => {
 });
 
 //get invoice
-router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res) => {
+router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   const { status } = req.query;
   try {
     const filter = {};
 
     if (req?.user?.role === "USER") {
-      filter.userOid = new ObjectId(req?.user?._id);
+      filter.userOid = req?.user?._id;
     }
     if (status) {
       filter.paymentStatus = status;
     }
 
+    const managerMatchStage = {};
+    if (req?.user?.role === "MANAGER") {
+      managerMatchStage["userInfo.manager"] = req?.user?._id;
+    }
+
     const pipeline = [
       { $match: filter },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userOid",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
       {
         $lookup: {
           from: "paymentmethodusers",
@@ -286,7 +323,13 @@ router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res)
           as: "payoutMethod",
         },
       },
-      { $addFields: { payoutMethod: { $arrayElemAt: ["$payoutMethod", 0] } } },
+      {
+        $addFields: {
+          userInfo: { $arrayElemAt: ["$userInfo", 0] },
+          payoutMethod: { $arrayElemAt: ["$payoutMethod", 0] },
+        },
+      },
+      { $match: managerMatchStage },
       {
         $project: {
           _id: 1,
@@ -304,7 +347,7 @@ router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res)
       },
     ];
     const invoices = await Invoice.aggregate(pipeline);
-  
+
     if (!invoices) {
       return res.status(404).json({ message: "No invoice found!" });
     }
@@ -316,13 +359,19 @@ router.get("/get-invoices", auth(["ADMIN", "USER", "MANAGER"]), async (req, res)
 });
 
 //upaate invoice status
-router.patch("/payment-status", auth(["ADMIN"]), async (req, res) => {
+router.patch("/payment-status", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const data = req.body;
 
   try {
-    const invoiceData = await Invoice.findOne({ invoiceId: data.invoiceId });
+    const invoiceData = await Invoice.findOne({ invoiceId: data.invoiceId }).populate([
+      { path: "userOid", select: "manager" },
+    ]);
     if (!invoiceData) {
       return res.status(404).json({ message: "No invoice found!" });
+    }
+
+    if (req?.user?.role === "MANAGER" && !req?.user?._id.equals(invoiceData?.userOid?.manager)) {
+      return res.status(401).json({ message: "Unauthorized access!" });
     }
 
     invoiceData.paymentStatus = data?.status;
@@ -330,7 +379,9 @@ router.patch("/payment-status", auth(["ADMIN"]), async (req, res) => {
       if (!result) {
         return res.status(500).json({ message: "something went wrong!" });
       }
+
       const userAccount = await UserAccount.findOne({ userOid: result?.userOid });
+
       if (data?.status === "approved") {
         userAccount.pendingWithdrawal -= parseFloat(result?.paymentAmount);
         userAccount.totalWithdrawal += parseFloat(result?.paymentAmount);
@@ -344,7 +395,7 @@ router.patch("/payment-status", auth(["ADMIN"]), async (req, res) => {
     });
 
     res.status(200).json({
-      message: `payment status updated!`,
+      message: "payment status updated!",
     });
   } catch (err) {
     res.status(500).json({ message: err?.message });

@@ -2,11 +2,9 @@
 const express = require("express");
 const AffiliationRequest = require("../../models/AffiliationRequest.model");
 const Campaign = require("../../models/Campaign.model");
-const User = require("../../models/User.model");
 const Notification = require("../../models/Notification.model");
 const auth = require("../../middleware/auth");
 const { mySimpleEncoder } = require("../../utilities/encoderDecoder.js");
-const { ObjectId } = require("mongodb");
 
 // router
 const router = express.Router();
@@ -16,9 +14,8 @@ router.post("/", auth(["USER"]), async (req, res) => {
   const requestData = req.body;
 
   try {
-    const userInfo = await User.findById(req.user._id);
-    if (!userInfo || userInfo?.status !== "active") {
-      return res.status(404).json({ message: "unauthorized access!" });
+    if (req?.user?.status !== "active") {
+      return res.status(401).json({ message: "unauthorized access!" });
     }
 
     const offerData = await Campaign.findById(requestData?.campaign);
@@ -38,29 +35,29 @@ router.post("/", auth(["USER"]), async (req, res) => {
 
     const campaignReq = new AffiliationRequest({
       campaign: offerData?._id,
-      userInfo: userInfo?._id,
-      manager: userInfo?.manager,
+      userInfo: req?.user?._id,
+      manager: req?.user?.manager,
     });
 
     campaignReq.save().then(async (result) => {
       // notify associate manager
       await Notification.create({
         targetRole: "MANAGER",
-        managerInfo: userInfo?.manager,
-        heading: `${userInfo?.name} requested for Offer #${requestData?.campaignId}`,
+        managerInfo: req?.user?.manager,
+        heading: `${req?.user?.name} requested for Offer #${requestData?.campaignId}`,
         type: "offer_request",
         link: `/campaign-request`,
       });
       // notify admin
       await Notification.create({
         targetRole: "ADMIN",
-        heading: `${userInfo?.name} requested for Offer #${requestData?.campaignId}`,
+        heading: `${req?.user?.name} requested for Offer #${requestData?.campaignId}`,
         type: "offer_request",
         link: `/campaign-request`,
       });
 
       return res.status(200).json({
-        message: "Offer request created!",
+        message: "Offer request sent",
       });
     });
   } catch (error) {
@@ -73,8 +70,9 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const matchStage = {};
     if (req?.user?.role === "MANAGER") {
-      matchStage.manager = new ObjectId(req?.user?._id);
+      matchStage.manager = req?.user?._id;
     }
+
     const pipeline = [
       {
         $match: matchStage,
@@ -129,7 +127,7 @@ router.get("/pending-request", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   try {
     const filter = { status: "pending" };
     if (req?.user?.role === "MANAGER") {
-      filter.manager = new ObjectId(req?.user?._id);
+      filter.manager = req?.user?._id;
     }
     const requestCount = await AffiliationRequest.countDocuments(filter);
 
@@ -176,7 +174,7 @@ router.patch("/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
       return res.status(406).json({ message: "offer is not active now!" });
     }
 
-    if (req?.user?.role === "MANAGER" && req?.user?._id !== request?.manager?.toString()) {
+    if (req?.user?.role === "MANAGER" && !req?.user?._id.equals(request?.manager)) {
       return res.status(406).json({ message: "Unauthorized access" });
     }
 

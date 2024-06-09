@@ -1,6 +1,6 @@
-const Manager = require("../../models/Manager.model");
 const express = require("express");
 const router = express.Router();
+const Manager = require("../../models/Manager.model");
 const { cleanUrl } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");
 
@@ -30,8 +30,12 @@ router.get("/single/:id", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }
+
+  const id = req.params.id;
   try {
-    const id = req.params.id;
+    if (req?.user?.role === "MANAGER" && req?.user?._id !== id) {
+      return res.status(401).json({ message: "you are not authorized to view this information" });
+    }
     const manager = await Manager.findById(id).select("-password");
 
     res.status(200).json(manager);

@@ -25,7 +25,7 @@ const generateMailSubjectAndMessage = ({ emailType, name, token, accountStatus }
         message: `<div>
             <p>Dear <strong>${name}</strong></p>
             <p>Thank you for registering at <strong>affburg.com</strong>. To activate your account and complete your registration click on the link: </p>
-            <a href=${process.env.DOMAIN}verify-user?token=${token} target='_blank'>${process.env.DOMAIN}verify-user?token=${token}</a>
+            <a href=${process.env.MAIN_DOMAIN}verify-user?token=${token} target='_blank'>${process.env.MAIN_DOMAIN}verify-user?token=${token}</a>
             <p>If you did not sign up for an account with <strong>affburg.com</strong>, please ignore this email.</p>
             <br />
             <p>Thank you,</p>
@@ -39,7 +39,7 @@ const generateMailSubjectAndMessage = ({ emailType, name, token, accountStatus }
         message: `<div>
         <p>Dear <strong>${name}</strong></p>
         <p>Click on the link below to reset your password: </p>
-        <a href=${process.env.DOMAIN}set-new-password?token=${token} target='_blank'>${process.env.DOMAIN}set-new-password?token=${token}</a>
+        <a href=${process.env.MAIN_DOMAIN}set-new-password?token=${token} target='_blank'>${process.env.MAIN_DOMAIN}set-new-password?token=${token}</a>
         <p>If you didn't request for password reset, please ignore this email.</p>
         <br />
         <p>Thank you,</p>

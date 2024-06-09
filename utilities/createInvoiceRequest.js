@@ -58,7 +58,7 @@ const createInvoiceRequest = async (minWithdrawBalance) => {
   return invoiceRequest;
 };
 
-// calculate and save weekly offerwise leads and revenue
+// calculate and save offerwise leads and revenue for certain time intervals
 const handleWeeklyOfferwiseClicks = async () => {
   const unpaidPipeline = [
     { $match: { lead: 1, status: "approved", paymentStatus: "unpaid" } },
@@ -88,23 +88,21 @@ const handleWeeklyOfferwiseClicks = async () => {
   ];
   const weeklyOfferClicks = await AffiliationClick.aggregate(unpaidPipeline);
 
-  // ---------- update click's payment status to pending ---------- //
-  for (const offerClick of weeklyOfferClicks) {
-    for (const transId of offerClick?.transIds) {
-      await AffiliationClick.findOneAndUpdate(
-        { transactionId: transId },
-        {
-          paymentStatus: "pending",
-        }
-      );
-      await AdAffiliationClick.findOneAndUpdate(
-        { transactionId: transId },
-        {
-          paymentStatus: "pending",
-        }
-      );
-    }
-  }
+  // -------- update resulted click's payment status to pending -------- //
+  const allTransIds = weeklyOfferClicks.reduce((acc, data) => acc.concat(data.transIds || []), []);
+
+  // Batch update AffiliationClick and AdAffiliationClick collection
+  await AffiliationClick.updateMany(
+    { transactionId: { $in: allTransIds } },
+    { paymentStatus: "pending" },
+    { upsert: false }
+  );
+  await AdAffiliationClick.updateMany(
+    { transactionId: { $in: allTransIds } },
+    { paymentStatus: "pending" },
+    { upsert: false }
+  );
+
   // ---------- save weeklyOfferClicks in database collection ---------- //
   await WeeklyOfferwiseClick.insertMany(weeklyOfferClicks);
 };

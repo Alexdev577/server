@@ -1,6 +1,5 @@
 const Notification = require("../../models/Notification.model");
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
 const { cleanUrl } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");

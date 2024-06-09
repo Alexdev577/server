@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema(
       postalCode: String,
       country: String,
     },
+    postbackUrl: String,
     isVerified: {
       type: Boolean,
       default: false,

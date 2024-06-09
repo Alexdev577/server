@@ -7,7 +7,7 @@ const moment = require("moment");
 const router = express.Router();
 
 //================= User Report ==================//
-// get affiliation report for user
+// get user affiliation report
 router.get("/user", auth(["USER"]), async (req, res) => {
   const { startDate, endDate, transStatus } = req.query;
 
@@ -19,7 +19,8 @@ router.get("/user", auth(["USER"]), async (req, res) => {
     const monthlyPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
+          status: { $ne: "denied" },
           updatedAt: {
             $gte: startOfThisMonth,
             $lte: today,
@@ -95,7 +96,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
       .format("YYYY-MM-DDTHH:mm:ss");
 
     let matchStage = {
-      userInfo: new ObjectId(req?.user?._id),
+      userInfo: req?.user?._id,
       updatedAt: {
         $gte: new Date(startOfStartDate),
         $lte: new Date(endOfEndDate + "Z"),
@@ -104,7 +105,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 
     if (transStatus && transStatus !== "approved") {
       matchStage = {
-        userInfo: new ObjectId(req?.user?._id),
+        userInfo: req?.user?._id,
         status: transStatus,
         updatedAt: {
           $gte: new Date(startOfStartDate),
@@ -114,7 +115,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
     }
     if (transStatus && transStatus == "approved") {
       matchStage = {
-        userInfo: new ObjectId(req?.user?._id),
+        userInfo: req?.user?._id,
         status: { $nin: ["pending", "denied"] },
         updatedAt: {
           $gte: new Date(startOfStartDate),
@@ -240,7 +241,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
   }
 });
 
-// get affiliation report by offerId
+// get user affiliation report by offerId
 router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
   const { offerId } = req.params;
   const { startDate, endDate, status } = req.query;
@@ -255,7 +256,7 @@ router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
       .format("YYYY-MM-DDTHH:mm:ss");
 
     let matchStage = {
-      userInfo: new ObjectId(req?.user?._id),
+      userInfo: req?.user?._id,
       offerId,
       status: { $nin: ["pending", "denied"] },
       updatedAt: {
@@ -265,7 +266,7 @@ router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
     };
     if (status === "pending" || status === "denied") {
       matchStage = {
-        userInfo: new ObjectId(req?.user?._id),
+        userInfo: req?.user?._id,
         offerId,
         status,
         updatedAt: {
@@ -331,7 +332,7 @@ router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
   }
 });
 
-//conversion report (user)
+// user conversion report
 router.get("/user/conversion", auth(["USER"]), async (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -345,7 +346,7 @@ router.get("/user/conversion", auth(["USER"]), async (req, res) => {
       .format("YYYY-MM-DDTHH:mm:ss");
 
     const filter = {
-      userInfo: new ObjectId(req?.user?._id),
+      userInfo: req?.user?._id,
       lead: 1,
       updatedAt: {
         $gte: new Date(startOfStartDate),
@@ -354,7 +355,7 @@ router.get("/user/conversion", auth(["USER"]), async (req, res) => {
     };
 
     const conversionData = await AffiliationClick.find(filter).select(
-      "offerId price country transactionId updatedAt status"
+      "offerId offerName price fraudScore country transactionId updatedAt status"
     );
 
     //-------------- get daily click data -----------------//
@@ -374,7 +375,7 @@ router.get("/user/revenue", auth(["USER"]), async (req, res) => {
     const pendingPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
           lead: 1,
           status: "pending",
         },
@@ -398,7 +399,7 @@ router.get("/user/revenue", auth(["USER"]), async (req, res) => {
     const monthlyPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
           lead: 1,
           status: "approved",
           updatedAt: {
@@ -426,7 +427,7 @@ router.get("/user/revenue", auth(["USER"]), async (req, res) => {
     const yesterdayPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
           lead: 1,
           status: "approved",
           updatedAt: {
@@ -454,7 +455,7 @@ router.get("/user/revenue", auth(["USER"]), async (req, res) => {
     const todayPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
           updatedAt: {
             $gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
           },
@@ -485,7 +486,7 @@ router.get("/user/revenue", auth(["USER"]), async (req, res) => {
     const graphPipeline = [
       {
         $match: {
-          userInfo: new ObjectId(req?.user?._id),
+          userInfo: req?.user?._id,
         },
       },
       {
@@ -561,9 +562,9 @@ router.get("/quick-report", auth(["ADMIN", "MANAGER"]), async (req, res) => {
       },
     };
     if (req?.user?.role === "MANAGER") {
-      matchStage.manager = new ObjectId(req?.user?._id);
+      matchStage.manager = req?.user?._id;
     }
-    console.log(matchStage);
+
     if (startDate && endDate && startDate !== endDate) {
       pipeline = [
         {
@@ -702,7 +703,7 @@ router.get("/quick-report/:offerId", auth(["ADMIN", "MANAGER"]), async (req, res
       },
     };
     if (req?.user?.role === "MANAGER") {
-      matchStage.manager = new ObjectId(req?.user?._id);
+      matchStage.manager = req?.user?._id;
     }
 
     const pipeline = [
@@ -824,7 +825,7 @@ router.get("/quick-report/userId/:userId", auth(["ADMIN", "MANAGER"]), async (re
       },
     };
     if (req?.user?.role === "MANAGER") {
-      matchStage.manager = new ObjectId(req?.user?._id);
+      matchStage.manager = req?.user?._id;
     }
 
     const pipeline = [
@@ -944,66 +945,43 @@ router.get("/conversion-report", auth(["ADMIN", "MANAGER"]), async (req, res) =>
       .endOf("day")
       .format("YYYY-MM-DDTHH:mm:ss");
 
-    let matchStage;
+    let filter = {
+      lead: 1,
+      updatedAt: {
+        $gte: new Date(startOfStartDate),
+        $lte: new Date(endOfEndDate + "Z"),
+      },
+    };
 
     if (userId) {
-      matchStage = {
-        userId,
-        lead: 1,
-        updatedAt: {
-          $gte: new Date(startOfStartDate),
-          $lte: new Date(endOfEndDate + "Z"),
+      filter.$or = [
+        {
+          userId: {
+            $regex: userId,
+            $options: "i",
+          },
         },
-      };
+        {
+          offerId: {
+            $regex: userId,
+            $options: "i",
+          },
+        },
+      ];
     } else if (transIds) {
       const searchIds = transIds.split("-");
-      matchStage = {
+      filter = {
         transactionId: { $in: searchIds },
-      };
-    } else {
-      matchStage = {
-        lead: 1,
-        updatedAt: {
-          $gte: new Date(startOfStartDate),
-          $lte: new Date(endOfEndDate + "Z"),
-        },
       };
     }
 
     if (req?.user?.role === "MANAGER") {
-      matchStage.manager = new ObjectId(req?.user?._id);
+      filter.manager = req?.user?._id;
     }
 
-    const pipeline = [
-      { $match: matchStage },
-      {
-        $lookup: {
-          from: "users",
-          localField: "userInfo",
-          foreignField: "_id",
-          as: "userData",
-        },
-      },
-      {
-        $addFields: {
-          userData: { $arrayElemAt: ["$userData", 0] },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          offerId: 1,
-          userId: "$userData.userId",
-          price: 1,
-          country: 1,
-          transactionId: 1,
-          updatedAt: 1,
-          status: 1,
-        },
-      },
-    ];
-
-    const report = await AffiliationClick.aggregate(pipeline);
+    const report = await AffiliationClick.find(filter).select(
+      "offerId userId transactionId price country updatedAt status fraudScore"
+    );
 
     return res.status(200).json(report);
   } catch (error) {

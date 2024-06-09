@@ -7,8 +7,13 @@ const paymentMethodUserSchema = new mongoose.Schema(
       ref: "User",
     },
     userId: String,
+    userName: String,
     paymentMethod: String,
     email: String,
+    manager: {
+      type: mongoose.Types.ObjectId,
+      ref: "Manager",
+    },
     cryptoType: String,
     cryptoAddress: String,
   },

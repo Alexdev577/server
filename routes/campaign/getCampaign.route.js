@@ -105,6 +105,10 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
   const { id } = req.params;
   const { offer, category, conversionType, country, platform } = req.query;
 
+  if (req?.user?.role === "USER" && id !== req?.user?._id?.toString()) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+
   try {
     let countryArray;
     if (country) {
@@ -136,11 +140,11 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           $and: [
             offer
               ? {
-                $or: [
-                  { "offerData.campaignId": { $eq: offer } },
-                  { "offerData.campaignName": { $regex: offer, $options: "i" } },
-                ],
-              }
+                  $or: [
+                    { "offerData.campaignId": { $eq: offer } },
+                    { "offerData.campaignName": { $regex: offer, $options: "i" } },
+                  ],
+                }
               : {},
             category && category !== "all" ? { "offerData.category": category } : {},
             conversionType && conversionType !== "all"

@@ -11,6 +11,9 @@ const auth = require("../../middleware/auth");
 const { mySimpleDecoder } = require("../../utilities/encoderDecoder.js");
 const UserAccount = require("../../models/UserAccount.model.js");
 
+const minFraud = require("@maxmind/minfraud-api-node");
+const client = new minFraud.Client(process.env.MAXMIND_ACCOUNT_ID, process.env.MAXMIND_LICENSE_KEY);
+
 // router
 const router = express.Router();
 
@@ -54,7 +57,7 @@ router.post("/", async (req, res) => {
 
     const campaignUrl = campaignInfo?.campaignUrl
       ?.replace("{trans_id}", transId)
-      .replace("{aff_id}", userId);
+      ?.replace("{aff_id}", userId);
 
     // post click to admin click collection
     const admin_aff_click = new AdAffiliationClick({
@@ -67,6 +70,7 @@ router.post("/", async (req, res) => {
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
       manager: userInfo?.manager,
+      postbackUrl: userInfo?.postbackUrl,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -85,6 +89,7 @@ router.post("/", async (req, res) => {
       userInfo: userInfo?._id,
       userId: userInfo?.userId,
       manager: userInfo?.manager,
+      postbackUrl: userInfo?.postbackUrl,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -155,6 +160,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
           userInfo: userInfo?._id,
           userId: userInfo?.userId,
           manager: userInfo?.manager,
+          postbackUrl: userInfo?.postbackUrl,
           ipAddress: data?.ipAddress,
           country: data?.country,
           status: data?.status,
@@ -173,6 +179,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
           userInfo: userInfo?._id,
           userId: userInfo?.userId,
           manager: userInfo?.manager,
+          postbackUrl: userInfo?.postbackUrl,
           ipAddress: data?.ipAddress,
           country: data?.country,
           status: data?.status,
@@ -238,9 +245,13 @@ router.post("/postback", async (req, res) => {
     if (!adminOfferClick) {
       return res.status(404).json({ message: "Transaction details not found!" });
     }
-    //---------- manipulate data and save into user collection ----------//
-    let campaign;
+    // get device minFraud score
+    const fraudScore = await getMinFraudScore(adminOfferClick?.ipAddress);
+    updatedDoc.fraudScore = fraudScore;
 
+    //---------- manipulate data and save into user collection ----------//
+
+    let campaign;
     if (adminOfferClick?.offerId === "0001") {
       campaign = await SmartLink.findById(adminOfferClick?.campaignInfo);
     } else {
@@ -252,12 +263,12 @@ router.post("/postback", async (req, res) => {
     }
 
     //---------- apply admincut on price ----------//
-    // let amount = 0;
     if (payout && campaign?.priceCut) {
       const adminCut = (payout / 100) * campaign?.priceCut;
-      // const amount = payout - adminCut;
       updatedDoc.price = payout - adminCut;
     }
+
+    let userPostbackUrl = ""; // if any then it will be customized
     //---------- apply commission/admincut on lead ----------//
     const counter = campaign?.counter;
     const commission = campaign?.commission / 10;
@@ -275,6 +286,15 @@ router.post("/postback", async (req, res) => {
       ).then(async (result) => {
         if (!result) {
           return res.status(500).json({ message: "Something went wrong!" });
+        }
+
+        if (result.postbackUrl) {
+          userPostbackUrl = result?.postbackUrl
+            ?.replace("{transId}", transId)
+            ?.replace("{payout}", payout ?? "")
+            ?.replace("{status}", status ?? "")
+            ?.replace("{subid}", result?.userId ?? "")
+            ?.replace("{country}", result?.country ?? "");
         }
 
         const account = await UserAccount.findOne({ userOid: result?.userInfo });
@@ -311,7 +331,7 @@ router.post("/postback", async (req, res) => {
         await campaign.save();
       }
     }
-    res.status(200).json({ message: "The postback well received!" });
+    res.status(200).json({ userPostbackUrl, message: "The postback well received!" });
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }
@@ -378,5 +398,21 @@ async function generateTransId() {
     return id;
   }
 }
+
+// get minFraud Score from MaxMind
+const getMinFraudScore = async (ipString) => {
+  const transaction = new minFraud.Transaction({
+    device: new minFraud.Device({
+      ipAddress: ipString,
+    }),
+  });
+  try {
+    const result = await client.score(transaction);
+    // console.log("response=>", result);
+    return result?.riskScore;
+  } catch (error) {
+    console.error("error=>", error);
+  }
+};
 
 module.exports = router;
