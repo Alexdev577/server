@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
 router.patch("/", auth(["ADMIN"]), async (req, res) => {
   const data = req.body;
   const dataToUpdate = {
-    domainName: data?.domainName && data.domainName,
+    trackerURL: data?.trackerURL && data.trackerURL,
     topCampaignFlag: data?.topCampaignFlag && data.topCampaignFlag,
     dayToWithdraw: data?.dayToWithdraw && data.dayToWithdraw,
     dateToWithdraw: data?.dateToWithdraw && data.dateToWithdraw,
@@ -26,12 +26,11 @@ router.patch("/", auth(["ADMIN"]), async (req, res) => {
   };
 
   try {
-    await Setting.findByIdAndUpdate(null, dataToUpdate, {
+    const result = await Setting.findByIdAndUpdate(null, dataToUpdate, {
       upsert: false,
+      new: true,
     });
-    return res.status(200).json({
-      message: "Settings updated!",
-    });
+    return res.status(200).json({ result, message: "Settings updated!" });
   } catch (error) {
     res.status(500).json({ message: error?.message });
   }

@@ -48,8 +48,6 @@ router.post("/", (req, res) => {
           {
             _id: login._id,
             email: login.email,
-            userName: login.userName,
-            name: login.name,
             role: login.role,
             status: login.status,
           },

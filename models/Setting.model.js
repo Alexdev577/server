@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const settingSchema = new mongoose.Schema(
   {
-    domainName: String,
+    trackerURL: String,
     topCampaignFlag: String,
     dayToWithdraw: Number,
     dateToWithdraw: [String],
