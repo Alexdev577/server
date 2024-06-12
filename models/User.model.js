@@ -34,6 +34,7 @@ const userSchema = new mongoose.Schema(
       country: String,
     },
     postbackUrl: String,
+    referral: String,
     isVerified: {
       type: Boolean,
       default: false,

@@ -4,7 +4,7 @@ const router = express.Router();
 const { cleanUrl } = require("../../utilities/dataCleaning");
 const auth = require("../../middleware/auth");
 
-// get filtered users with pagination and sorting
+// get filtered users
 router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
@@ -65,7 +65,8 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     res.status(500).json({ message: err?.message });
   }
 });
-// get filtered users with pagination and sorting
+
+// get filtered users/manager-affiliates
 router.get("/manager-affiliates", auth(["MANAGER"]), async (req, res) => {
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
