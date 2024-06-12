@@ -129,27 +129,8 @@ app.get("/", (req, res) => {
   res.status(200).send("Affburg server is running...");
 });
 
-const { sendEmail } = require("./utilities/mailer");
+const AffiliationClick = require("./models/AffiliationClick.model");
 app.get("/test-api", async (req, res) => {
-  // const token = await generateHashToken("416416141651316316").catch((err) => console.log(err));
-
-  // const emailData = generateMailSubjectAndMessage({
-  //   emailType: "verify-email",
-  //   name: "Adif Khan",
-  //   activationCode: "416416",
-  //   token: "6544164161368411",
-  // });
-
-  // sendEmail({
-  //   name: "Jubair Ahmed Tolon",
-  //   email: "pkadif@gmail.com",
-  //   activationCode: "165435",
-  //   token: "14984168461561865654",
-  //   emailType: "verify-email",
-  // })
-  //   .then((res) => console.log("mail res", res))
-  //   .catch((err) => console.log("mail err", err));
-
   res.status(200).send({ message: "testing purposes" });
 });
 

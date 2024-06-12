@@ -22,25 +22,26 @@ router.post("/", async (req, res) => {
   const { ip, country, offerId, affId } = req.body;
 
   try {
+    // ------------ find user info ------------ //
     const userId = mySimpleDecoder(affId);
     const userInfo = await User.findOne({ userId });
 
+    if (!userInfo || userInfo?.status !== "active") {
+      return res.status(404).json({ message: "No active user found" });
+    }
+    // ------------ find campaign info and handle errors ------------ //
     let campaignInfo;
     if (offerId === "0001") {
       campaignInfo = await SmartLink.findOne({ campaignId: offerId });
 
-      if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found" });
+      if (!campaignInfo || campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "No active offer found" });
       }
     } else {
       campaignInfo = await Campaign.findOne({ campaignId: offerId });
 
-      if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found" });
-      }
-
-      if (campaignInfo?.status !== "active") {
-        return res.status(404).json({ message: "This offer isn't active now" });
+      if (!campaignInfo || campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "No active offer found" });
       }
 
       const offerRequest = await AffiliationRequest.findOne({
@@ -49,7 +50,7 @@ router.post("/", async (req, res) => {
       });
 
       if (!offerRequest || offerRequest?.status !== "approved") {
-        return res.status(404).json({ message: "no active affiliation found!" });
+        return res.status(404).json({ message: "No active affiliation found!" });
       }
     }
 
@@ -97,7 +98,7 @@ router.post("/", async (req, res) => {
     });
     await aff_click.save();
 
-    res.status(200).send({ url: campaignUrl });
+    res.status(200).json({ url: campaignUrl });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: error?.message });
@@ -111,24 +112,23 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
   try {
     // ------------ find user info ------------ //
     const userInfo = await User.findOne({ userId: data?.userId });
+    if (!userInfo || userInfo?.status !== "active") {
+      return res.status(404).json({ message: "No active user found" });
+    }
 
     // ------------ find campaign info and handle errors ------------ //
     let campaignInfo;
     if (data?.offerId === "0001") {
       campaignInfo = await SmartLink.findOne({ campaignId: data?.offerId });
 
-      if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found!" });
+      if (!campaignInfo || campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "No active offer found" });
       }
     } else {
       campaignInfo = await Campaign.findOne({ campaignId: data?.offerId });
 
-      if (!campaignInfo || !userInfo) {
-        return res.status(404).json({ message: "Offer not found!" });
-      }
-
-      if (campaignInfo?.status !== "active") {
-        return res.status(404).json({ message: "This offer isn't active now" });
+      if (!campaignInfo || campaignInfo?.status !== "active") {
+        return res.status(404).json({ message: "No active offer found" });
       }
 
       const offerRequest = await AffiliationRequest.findOne({
@@ -137,7 +137,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
       });
 
       if (!offerRequest || offerRequest?.status !== "approved") {
-        return res.status(404).json({ message: "no active affiliation found!" });
+        return res.status(404).json({ message: "No active affiliation found!" });
       }
     }
 
@@ -193,9 +193,9 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
     const userClicked = await AffiliationClick.insertMany(clicks);
     const adminClicked = await AdAffiliationClick.insertMany(clicks);
 
-    const account = await UserAccount.findOne({ userOid: userInfo?._id });
     const price = campaignInfo?.price || data?.price;
     const totalAmount = parseFloat(price) * parseInt(data?.leads);
+    const account = await UserAccount.findOne({ userOid: userInfo?._id });
 
     if (!account && data?.status === "approved" && totalAmount > 0) {
       await UserAccount.create({
@@ -211,7 +211,7 @@ router.post("/custom-click", auth(["ADMIN"]), async (req, res) => {
     }
 
     if (!adminClicked || !userClicked) {
-      return res.status(406).json({ message: "Something went wrong!" });
+      return res.status(500).json({ message: "Something went wrong!" });
     }
 
     res.status(200).json({ message: "Clicks added successfully" });
@@ -250,7 +250,6 @@ router.post("/postback", async (req, res) => {
     updatedDoc.fraudScore = fraudScore;
 
     //---------- manipulate data and save into user collection ----------//
-
     let campaign;
     if (adminOfferClick?.offerId === "0001") {
       campaign = await SmartLink.findById(adminOfferClick?.campaignInfo);
@@ -262,13 +261,13 @@ router.post("/postback", async (req, res) => {
       return res.status(404).json({ message: "No associated offer found!" });
     }
 
-    //---------- apply admincut on price ----------//
+    //---------- apply commission on price if any----------//
     if (payout && campaign?.priceCut) {
       const adminCut = (payout / 100) * campaign?.priceCut;
       updatedDoc.price = payout - adminCut;
     }
 
-    let userPostbackUrl = ""; // if any then it will be customized
+    let userPostbackUrl = "";
     //---------- apply commission/admincut on lead ----------//
     const counter = campaign?.counter;
     const commission = campaign?.commission / 10;
@@ -290,10 +289,11 @@ router.post("/postback", async (req, res) => {
 
         if (result.postbackUrl) {
           userPostbackUrl = result?.postbackUrl
-            ?.replace("{transId}", transId)
+            ?.replace("{trans_id}", transId)
             ?.replace("{payout}", payout ?? "")
             ?.replace("{status}", status ?? "")
-            ?.replace("{subid}", result?.userId ?? "")
+            ?.replace("{sub_id}", result?.userId ?? "")
+            ?.replace("{ip_address}", result?.ipAddress ?? "")
             ?.replace("{country}", result?.country ?? "");
         }
 

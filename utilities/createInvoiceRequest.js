@@ -63,6 +63,19 @@ const handleWeeklyOfferwiseClicks = async () => {
   const unpaidPipeline = [
     { $match: { lead: 1, status: "approved", paymentStatus: "unpaid" } },
     {
+      $lookup: {
+        from: "users",
+        localField: "userInfo",
+        foreignField: "_id",
+        as: "userData",
+      },
+    },
+    {
+      $match: {
+        "userData.status": "active",
+      },
+    },
+    {
       $group: {
         _id: {
           userInfo: "$userInfo",
