@@ -13,6 +13,7 @@ const adAffiliationClickSchema = new mongoose.Schema(
       ref: "User",
     },
     userId: String,
+    subId: String,
     manager: {
       type: mongoose.Types.ObjectId,
       ref: "Manager",

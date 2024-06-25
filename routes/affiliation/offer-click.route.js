@@ -19,7 +19,7 @@ const router = express.Router();
 
 // post offer click
 router.post("/", async (req, res) => {
-  const { ip, country, offerId, affId } = req.body;
+  const { ip, country, offerId, affId, clickId, subId } = req.body;
 
   try {
     // ------------ find user info ------------ //
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    const transId = await generateTransId();
+    const transId = clickId || (await generateTransId());
 
     const campaignUrl = campaignInfo?.campaignUrl
       ?.replace("{trans_id}", transId)
@@ -72,6 +72,7 @@ router.post("/", async (req, res) => {
       userId: userInfo?.userId,
       manager: userInfo?.manager,
       postbackUrl: userInfo?.postbackUrl,
+      subId: subId,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -91,6 +92,7 @@ router.post("/", async (req, res) => {
       userId: userInfo?.userId,
       manager: userInfo?.manager,
       postbackUrl: userInfo?.postbackUrl,
+      subId: subId,
       ipAddress: ip ?? "",
       country: country ?? "",
       createdAt: new Date(),
@@ -290,9 +292,9 @@ router.post("/postback", async (req, res) => {
         if (result.postbackUrl) {
           userPostbackUrl = result?.postbackUrl
             ?.replace("{trans_id}", transId)
-            ?.replace("{payout}", payout ?? "")
-            ?.replace("{status}", status ?? "")
-            ?.replace("{sub_id}", result?.userId ?? "")
+            ?.replace("{payout}", result?.price ?? "")
+            ?.replace("{status}", result?.status ?? "")
+            ?.replace("{sub_id}", result?.subId ?? "")
             ?.replace("{ip_address}", result?.ipAddress ?? "")
             ?.replace("{country}", result?.country ?? "");
         }
