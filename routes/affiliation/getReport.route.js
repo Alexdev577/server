@@ -232,7 +232,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 
     //------------- get monthly click data -----------------//
     const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
-
+    // const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
     //-------------- get daily click data -----------------//
     const dailyData = await AffiliationClick.aggregate(dailyPipeline);
 
@@ -243,6 +243,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 });
 
 // get user affiliation report by offerId
+
 router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
   const { offerId } = req.params;
   const { startDate, endDate, status, base } = req.query;
@@ -368,13 +369,11 @@ router.get("/user/conversion", auth(["USER"]), async (req, res) => {
     };
 
     const dataCount = await AffiliationClick.countDocuments(filter);
-    const conversionData = await AffiliationClick.find(filter)
-      .select("offerId offerName price fraudScore country transactionId updatedAt status")
-      .sort({
-        updatedAt: -1,
-      })
-      .skip(page * rowsPerPage)
-      .limit(rowsPerPage);
+    const conversionData = await AffiliationClick.find(filter).select(
+      "offerId offerName price fraudScore country transactionId updatedAt status"
+    ).sort({
+      updatedAt: -1,
+    }).skip(page * rowsPerPage).limit(rowsPerPage);
 
     //-------------- get daily click data -----------------//
     return res.status(200).json({ dataCount, conversionData });
