@@ -44,11 +44,11 @@ router.get("/list", auth(["ADMIN", "MANAGER"]), async (req, res) => {
 
 //get filtered campaigns
 router.get("/", auth(["USER", "MANAGER", "ADMIN"]), async (req, res) => {
+
   if (!cleanUrl(req.originalUrl)) {
     return res.status(400).json({ message: "bad request" });
   }
-
-  const { offer, category, conversionType, country, platform } = req.query;
+  const { offer, category, conversionType, country, platform, page, rowsPerPage } = req.query;
   try {
     let filter = {};
 
@@ -90,11 +90,12 @@ router.get("/", auth(["USER", "MANAGER", "ADMIN"]), async (req, res) => {
         };
       }
     }
+    const dataCount = await Campaign.countDocuments(filter);
     const allCampaign = await Campaign.find(filter).sort({
       createdAt: -1,
-    });
+    }).skip(page * rowsPerPage).limit(rowsPerPage);
 
-    res.status(200).json(allCampaign);
+    res.status(200).json({ dataCount, allCampaign });
   } catch (err) {
     res.status(500).json({ message: err?.message });
   }
@@ -103,7 +104,7 @@ router.get("/", auth(["USER", "MANAGER", "ADMIN"]), async (req, res) => {
 //get filtered approved offers for user
 router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
   const { id } = req.params;
-  const { offer, category, conversionType, country, platform } = req.query;
+  const { offer, category, conversionType, country, platform, page, rowsPerPage } = req.query;
 
   if (req?.user?.role === "USER" && id !== req?.user?._id?.toString()) {
     return res.status(400).json({ message: "Invalid Request" });
@@ -140,11 +141,11 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           $and: [
             offer
               ? {
-                  $or: [
-                    { "offerData.campaignId": { $eq: offer } },
-                    { "offerData.campaignName": { $regex: offer, $options: "i" } },
-                  ],
-                }
+                $or: [
+                  { "offerData.campaignId": { $eq: offer } },
+                  { "offerData.campaignName": { $regex: offer, $options: "i" } },
+                ],
+              }
               : {},
             category && category !== "all" ? { "offerData.category": category } : {},
             conversionType && conversionType !== "all"
@@ -170,10 +171,24 @@ router.get("/approved/:id", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
           offerApprovalStatus: "$status",
         },
       },
-    ];
-    const result = await AffiliationRequest.aggregate(pipeline);
 
-    return res.status(200).json(result);
+    ];
+    const pagination = [{
+      $sort: {
+        campaignId: 1,
+      },
+    },
+    {
+      $skip: parseInt(page) * parseInt(rowsPerPage),
+    },
+    {
+      $limit: parseInt(rowsPerPage),
+    },]
+    const dataCount = await AffiliationRequest.aggregate(pipeline);
+
+    const result = await AffiliationRequest.aggregate([...pipeline, ...pagination]);
+
+    return res.status(200).json({ dataCount: dataCount.length, result });
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }

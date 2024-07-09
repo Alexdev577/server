@@ -289,7 +289,8 @@ router.patch("/invoice-requests/:id", auth(["ADMIN", "MANAGER"]), async (req, re
 
 //get invoice
 router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res) => {
-  const { status } = req.query;
+  const { status, page, rowsPerPage } = req.query;
+
   try {
     const filter = {};
 
@@ -331,31 +332,46 @@ router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
       },
       { $match: managerMatchStage },
       {
-        $project: {
-          _id: 1,
-          invoiceId: 1,
-          userOid: 1,
-          paymentAmount: 1,
-          paymentStatus: 1,
-          createdAt: 1,
-          userId: "$userInfo.userId",
-          userName: "$userInfo.name",
-          payoutMethod: "$payoutMethod.paymentMethod",
-          payoutEmail: "$payoutMethod.email",
-          cryptoAddress: "$payoutMethod.cryptoAddress",
-          cryptoType: "$payoutMethod.cryptoType",
+        $facet: {
+          totalData: [
+            { $skip: parseInt(page * rowsPerPage) },
+            { $limit: parseInt(rowsPerPage) },
+            {
+              $project: {
+                _id: 1,
+                invoiceId: 1,
+                userOid: 1,
+                paymentAmount: 1,
+                paymentStatus: 1,
+                createdAt: 1,
+                userId: "$userInfo.userId",
+                userName: "$userInfo.name",
+                payoutMethod: "$payoutMethod.paymentMethod",
+                payoutEmail: "$payoutMethod.email",
+                cryptoAddress: "$payoutMethod.cryptoAddress",
+                cryptoType: "$payoutMethod.cryptoType",
+              },
+            },
+          ],
+          dataCount: [
+            { $count: "count" },
+          ],
         },
       },
     ];
-    const invoices = await Invoice.aggregate(pipeline);
+    const result = await Invoice.aggregate(pipeline);
 
-    if (!invoices) {
-      return res.status(404).json({ message: "No invoice found!" });
+    const invoices = result[0]?.totalData || [];
+    const dataCount = result[0]?.dataCount[0]?.count || 0;
+
+    if (invoices.length === 0) {
+      return res.status(404).json({ message: "No invoices found!" });
     }
 
-    res.status(200).json(invoices);
+    res.status(200).json({ dataCount, invoices });
+
   } catch (err) {
-    res.status(500).json({ message: err?.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
