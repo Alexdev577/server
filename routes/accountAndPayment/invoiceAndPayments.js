@@ -375,6 +375,40 @@ router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
   }
 });
 
+// pending invoice user to admin
+router.get("/get-invoices/pending", auth(["ADMIN", "MANAGER"]), async (req, res) => {
+  const { status } = req.query;
+
+  try {
+    const filter = status ? { paymentStatus: status } : {};
+
+    if (req?.user?.role === "MANAGER") {
+      filter["userInfo.manager"] = req?.user?._id;
+    }
+    const pipeline = [
+      { $match: filter },
+      {
+        $facet: {
+          dataCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    // Execute the aggregation pipeline
+    const result = await Invoice.aggregate(pipeline);
+
+    // Extract the data count
+    const dataCount = result[0]?.dataCount[0]?.count || 0;
+
+    // Send the response with the data count
+    res.status(200).json({ dataCount });
+
+  } catch (err) {
+    // Enhanced error handling with detailed error message
+    res.status(500).json({ message: `An error occurred while fetching invoices: ${err.message}` });
+  }
+});
+
 //upaate invoice status
 router.patch("/payment-status", auth(["ADMIN", "MANAGER"]), async (req, res) => {
   const data = req.body;
