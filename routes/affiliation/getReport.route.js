@@ -8,6 +8,7 @@ const router = express.Router();
 
 //================= User Report ==================//
 // get user affiliation report
+
 router.get("/user", auth(["USER"]), async (req, res) => {
   const { startDate, endDate, transStatus } = req.query;
 
@@ -86,7 +87,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
       },
     ];
 
-    // --------------- conditional daily pipeline --------------- //
+    // ------ conditional daily pipeline ------- //
     // modify start and end dates
     const startOfStartDate = moment(startDate, "ddd MMM DD YYYY HH:mm:ss")
       .startOf("day")
@@ -231,7 +232,7 @@ router.get("/user", auth(["USER"]), async (req, res) => {
 
     //------------- get monthly click data -----------------//
     const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
-    // const monthlyData = await AffiliationClick.aggregate(monthlyPipeline);
+
     //-------------- get daily click data -----------------//
     const dailyData = await AffiliationClick.aggregate(dailyPipeline);
 
@@ -346,7 +347,7 @@ router.get("/user/offerId/:offerId", auth(["USER"]), async (req, res) => {
 
 // user conversion report
 router.get("/user/conversion", auth(["USER"]), async (req, res) => {
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, page, rowsPerPage } = req.query;
 
   try {
     // modify start and end dates
@@ -366,12 +367,17 @@ router.get("/user/conversion", auth(["USER"]), async (req, res) => {
       },
     };
 
-    const conversionData = await AffiliationClick.find(filter).select(
-      "offerId offerName price fraudScore country transactionId updatedAt status"
-    );
+    const dataCount = await AffiliationClick.countDocuments(filter);
+    const conversionData = await AffiliationClick.find(filter)
+      .select("offerId offerName price fraudScore country transactionId updatedAt status")
+      .sort({
+        updatedAt: -1,
+      })
+      .skip(page * rowsPerPage)
+      .limit(rowsPerPage);
 
     //-------------- get daily click data -----------------//
-    return res.status(200).json(conversionData);
+    return res.status(200).json({ dataCount, conversionData });
   } catch (error) {
     return res.status(500).json({ message: error?.message });
   }
