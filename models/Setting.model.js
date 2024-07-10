@@ -5,7 +5,7 @@ const settingSchema = new mongoose.Schema(
     trackerURL: String,
     topCampaignFlag: String,
     dayToWithdraw: Number,
-    dateToWithdraw: [String],
+    dateToWithdraw: [Number],
     minWithdrawBalance: Number,
     invoiceFlag: Boolean,
   },
