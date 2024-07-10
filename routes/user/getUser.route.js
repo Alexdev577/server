@@ -10,7 +10,7 @@ router.get("/", auth(["ADMIN", "MANAGER"]), async (req, res) => {
     return res.status(400).json({ message: "bad request" });
   }
   const { startDate, endDate, searchTerm, status } = req.query;
-  const filterableFields = ["userId", "userName", "email", "name", "phone"];
+  const filterableFields = ["userId", "userName", "email", "name"];
 
   try {
     const conditions = [];
@@ -72,7 +72,7 @@ router.get("/manager-affiliates", auth(["MANAGER"]), async (req, res) => {
     return res.status(400).json({ message: "bad request" });
   }
   const { startDate, endDate, searchTerm, status } = req.query;
-  const filterableFields = ["userId", "userName", "email", "name", "phone"];
+  const filterableFields = ["userId", "userName", "email", "name"];
 
   try {
     const conditions = [{ manager: req?.user?._id }];

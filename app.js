@@ -135,7 +135,7 @@ app.get("/", (req, res) => {
 
 const AffiliationClick = require("./models/AffiliationClick.model");
 app.get("/test-api", async (req, res) => {
-  res.status(200).send({ message: "testing purposes" });
+  res.redirect("https://google.com&s3=0176&s2=5Pdi6eNx9njPnykGYfzxCx");
 });
 
 module.exports = app;

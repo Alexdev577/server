@@ -353,9 +353,7 @@ router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
               },
             },
           ],
-          dataCount: [
-            { $count: "count" },
-          ],
+          dataCount: [{ $count: "count" }],
         },
       },
     ];
@@ -364,12 +362,7 @@ router.get("/get-invoices", auth(["ADMIN", "MANAGER", "USER"]), async (req, res)
     const invoices = result[0]?.totalData || [];
     const dataCount = result[0]?.dataCount[0]?.count || 0;
 
-    if (invoices.length === 0) {
-      return res.status(404).json({ message: "No invoices found!" });
-    }
-
     res.status(200).json({ dataCount, invoices });
-
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -402,7 +395,6 @@ router.get("/get-invoices/pending", auth(["ADMIN", "MANAGER"]), async (req, res)
 
     // Send the response with the data count
     res.status(200).json({ dataCount });
-
   } catch (err) {
     // Enhanced error handling with detailed error message
     res.status(500).json({ message: `An error occurred while fetching invoices: ${err.message}` });
