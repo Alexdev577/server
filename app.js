@@ -24,7 +24,7 @@ const corsOptions = {
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect("mongodb+srv://doadmin:28i5CB64HLQ73z0k@db-mongodb-sgp1-05239-0193f6f9.mongo.ondigitalocean.com/affburg?tls=true&authSource=admin&replicaSet=db-mongodb-sgp1-05239", {
   // useNewUrlParser: true,
   // useUnifiedTopology: true,
 });
