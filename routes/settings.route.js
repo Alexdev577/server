@@ -6,7 +6,8 @@ const router = express.Router();
 // get settings
 router.get("/", async (req, res) => {
   try {
-    const setting = await Setting.findById(null);
+    const settingId = "6745da2fcce157f463e53c7c";
+    const setting = await Setting.findById(settingId);
 
     return res.status(200).json(setting);
   } catch (error) {
