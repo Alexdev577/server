@@ -13,7 +13,7 @@ const auth = require("../../middleware/auth");
 const router = express.Router();
 
 // create invoice-request on admin specified date
-router.get("/create-invoice", auth(["ADMIN", "MANAGER"]), async (req, res) => {
+router.get("/create-invoice", async (req, res) => {
   try {
     const setting = await Setting.findById(null);
 
