@@ -13,12 +13,12 @@ const sendEmail = async ({ email, name, token, emailType, accountStatus }) => {
 
       // Create a transporter object using SMTP
       const transporter = nodemailer.createTransport({
-        host: process.env.HOST_NAME,
+        host: "mail.affburg.com",
         port: 465,
         secure: true,
         auth: {
-          user: process.env.EMAIL_ADDRESS,
-          pass: process.env.PASSWORD,
+          user: "noreply@affburg.com",
+          pass: "]W{[{Z?Wwy5C",
         },
       });
       // const transporter = nodemailer.createTransport({
